@@ -1,0 +1,22 @@
+[
+    {
+        "prompt": "Complete the calculation: 1243 + 2411 = ",
+        "difficulty": "medium",
+        "category": ["arithmetic"],
+        "n_shots": 0
+    },
+
+    {
+        "prompt": "Answer the question in a single word: The capital of France is ",
+        "difficulty": "easy",
+        "category": ["common knowledge"],
+        "n_shots": 0
+    },
+    {
+        "prompt": "TASK QUERY\n\nInput:\n86\n64\nOutput:\n868686\n646464\n686868\n464646\n868686\n646464\n\nInput:\n79\n43\nOutput:\n797979\n434343\n979797\n343434\n797979\n434343\n\nInput:\n32\n78\nOutput:",
+        "difficulty": "medium",
+        "category": ["pattern recognition"],
+        "n_shots": 2
+    }
+    
+]
