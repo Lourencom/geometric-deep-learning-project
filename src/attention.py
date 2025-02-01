@@ -10,7 +10,7 @@ from utils import get_git_root, get_model_and_tokenizer
 from constants import Constants
 from prompts import Prompts
 
-def extract_attention(args):
+def run_model(args):
     model, tokenizer = get_model_and_tokenizer(args.model_size)
 
     prompts = Prompts(args.prompt_path)       
@@ -25,6 +25,14 @@ def extract_attention(args):
     with torch.no_grad():
         outputs = model(**inputs, output_attentions=True)
 
+    with torch.no_grad():
+        generated_ids = model.generate(**inputs, max_new_tokens=100)
+        answer = tokenizer.decode(generated_ids[0], skip_special_tokens=True)
+    
+    return outputs, answer, prompt
+
+
+def extract_attention(args, outputs):
     attention_values = outputs.attentions
 
     attention_arrays = [attn.cpu().to(torch.float32).numpy() for attn in attention_values]
@@ -33,6 +41,22 @@ def extract_attention(args):
     output_dir = os.path.join(git_root_path, args.output_dir)
     os.makedirs(output_dir, exist_ok=True)  
     np.save(os.path.join(output_dir, f"attention_values_{args.model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.npy"), attention_arrays) 
+
+
+def store_answer(args, answer, prompt):
+    git_root_path = get_git_root()
+    output_dir = os.path.join(git_root_path, args.output_dir)
+    os.makedirs(output_dir, exist_ok=True)
+    
+    # Save the prompt and the answer to a text file for reference
+    answer_file = os.path.join(output_dir, f"generated_answer_{args.model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.txt")
+    with open(answer_file, "w") as f:
+        f.write("Prompt:\n")
+        f.write(prompt + "\n\n")
+        f.write("Generated Answer:\n")
+        f.write(answer)
+    return answer_file
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -44,4 +68,6 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, default="data/attn")
     args = parser.parse_args()
 
-    extract_attention(args)
+    outputs, answer, prompt = run_model(args)
+    extract_attention(args, outputs)
+    store_answer(args, answer, prompt)
