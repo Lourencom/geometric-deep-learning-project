@@ -12,11 +12,26 @@
         "category": ["common knowledge"],
         "n_shots": 0
     },
+
     {
         "prompt": "TASK QUERY\n\nInput:\n86\n64\nOutput:\n868686\n646464\n686868\n464646\n868686\n646464\n\nInput:\n79\n43\nOutput:\n797979\n434343\n979797\n343434\n797979\n434343\n\nInput:\n32\n78\nOutput:",
         "difficulty": "medium",
         "category": ["pattern recognition"],
         "n_shots": 2
+    },
+
+    {
+        "prompt": "If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?",
+        "difficulty": "medium",
+        "category": ["logical reasoning"],
+        "n_shots": 0
+    },
+
+    {
+        "prompt": "Context: In our neighborhood, we were the small family, at least among the Irish and Italians. A few doors down, there were 12 kids in one house, 14 in another. We could almost field a full baseball team. But the Flynns, they could put an entire football lineup on a snowy field at Thanksgiving, with reserves. My mother agonized over what to do. She was devout, though starting to read progressive Catholic magazines like Commonweal, which published the essays of Hannah Arendt and the poetry of W.H. Auden. We loved Robert F. Kennedy’s family: 11 kids, and Ethel looks great. Bobby himself was the seventh of nine. Of course, they had money, so it looked glamorous.\nQ: The author believes his family could fill a team of which sport?",
+        "difficulty": "medium",
+        "category": ["reading comprehension"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/squad_shifts"
     }
-    
 ]
