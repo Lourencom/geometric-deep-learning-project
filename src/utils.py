@@ -31,6 +31,15 @@ def get_model_and_tokenizer(model_size):
             device_map="auto"
         )
         tokenizer = AutoTokenizer.from_pretrained(Constants.LARGE_MODEL_NAME_CAUSAL_LM)
+    
+    elif model_size == 'huge':
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            Constants.HUGE_MODEL_NAME_INSTRUCT,
+            torch_dtype=torch.bfloat16,
+            device_map="auto"
+        )
+        tokenizer = AutoTokenizer.from_pretrained(Constants.HUGE_MODEL_NAME_INSTRUCT)
+        
     else:
         raise ValueError(f"Invalid model size: {model_size}")
     return model, tokenizer
