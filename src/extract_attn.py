@@ -1,57 +1,47 @@
 import argparse
 import os
 import torch
-import transformers
+import numpy as np
+
+import transformers 
 from transformers import AutoTokenizer
 
+from utils import get_git_root, get_model_and_tokenizer
 from constants import Constants
 from prompts import Prompts
 
-parser = argparse.ArgumentParser()
-parser.add_argument("--model_size", type=str, default="large")
-parser.add_argument("--prompt_difficulty", type=str, default="medium")
-parser.add_argument("--prompt_category", type=str, default=None)
-parser.add_argument("--prompt_n_shots", type=int, default=None)
-args = parser.parse_args()
+def extract_attention(args):
+    model, tokenizer = get_model_and_tokenizer(args.model_size)
 
-
-def extract_attention(model, tokenizer, prompt):
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-
-    if args.model_size == 'small':
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            Constants.SMALL_MODEL_NAME_CAUSAL_LM,
-            torch_dtype=torch.bfloat16,
-            device_map="auto"
-        )
-        tokenizer = AutoTokenizer.from_pretrained(Constants.SMALL_MODEL_NAME_CAUSAL_LM)
-    elif args.model_size == 'large':
-        model = transformers.AutoModelForCausalLM.from_pretrained(
-            Constants.LARGE_MODEL_NAME_CAUSAL_LM,
-            torch_dtype=torch.bfloat16,
-            device_map="auto"
-        )
-        tokenizer = AutoTokenizer.from_pretrained(Constants.LARGE_MODEL_NAME_CAUSAL_LM)
-    else:
-        raise ValueError(f"Invalid model choice: {args.model_size}")
-
-    git_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
-    prompts = Prompts(os.path.join(git_root, "prompts.json"))       
-    prompt = prompts.get_prompt("TASK QUERY", difficulty=args.prompt_difficulty, category=args.prompt_category, n_shots=args.prompt_n_shots)
+    prompts = Prompts(args.prompt_path)       
+    prompt = prompts.get_prompt(
+        difficulty=args.prompt_difficulty,
+        category=args.prompt_category,
+        n_shots=args.prompt_n_shots
+    )
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
 
-    # Replace the generate call with forward pass to get attention values
     with torch.no_grad():
         outputs = model(**inputs, output_attentions=True)
 
-    # attention_values will be a tuple of attention tensors for each layer
-    # Each tensor has shape (batch_size, num_heads, sequence_length, sequence_length)
     attention_values = outputs.attentions
 
-
-    # Convert attention values to numpy and save
-    import numpy as np
-
     attention_arrays = [attn.cpu().to(torch.float32).numpy() for attn in attention_values]
-    np.save('attention_values.npy', attention_arrays) 
+
+    git_root_path = get_git_root()
+    output_dir = os.path.join(git_root_path, args.output_dir)
+    os.makedirs(output_dir, exist_ok=True)  
+    np.save(os.path.join(output_dir, f"attention_values_{args.model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.npy"), attention_arrays) 
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model_size", type=str, default="large")
+    parser.add_argument("--prompt_path", type=str, default="data/prompts.json")
+    parser.add_argument("--prompt_difficulty", type=str, default="medium")
+    parser.add_argument("--prompt_category", type=str, default=None)
+    parser.add_argument("--prompt_n_shots", type=int, default=None)
+    parser.add_argument("--output_dir", type=str, default="data/attn")
+    args = parser.parse_args()
+
+    extract_attention(args)

@@ -1,12 +1,16 @@
 import json
+import os
 import random
+from utils import get_git_root
 
 class Prompts:
     def __init__(self, prompts_path):
+        if not prompts_path.startswith('/'):
+            prompts_path = os.path.join(get_git_root(), prompts_path)
         with open(prompts_path, 'r') as file:
             self.prompts = json.load(file)
 
-    def get_prompt(self, prompt_name, difficulty=None, category=None, n_shots=None):
+    def get_prompt(self, difficulty=None, category=None, n_shots=None):
         potential_prompts = self.prompts
         if difficulty is not None:
             potential_prompts = [p for p in potential_prompts if p['difficulty'] == difficulty]
