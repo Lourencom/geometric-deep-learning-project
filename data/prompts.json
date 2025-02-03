@@ -33,5 +33,60 @@
         "category": ["reading comprehension"],
         "n_shots": 0,
         "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/squad_shifts"
+    },
+
+    {
+        "prompt": "For the following (in-progress) chess game, please complete the notation for the last shown move by filling in the destination square:\n g2g3 d7d6 f1g2 e7e5 g1f3 g8f6 d2d4 b8",
+        "difficulty": "hard",
+        "category": ["chess", "state-tracking", "logical reasoning", "visual reasoning"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/chess_state_tracking/real_short/task.json",
+        "_possible_answers": ["d7", "c6", "a6"]
+    },
+
+    {
+        "prompt": "It's significantly harder for Poppy to Successfully use Heroic Charge to stun enemies than it is for Vayne to use Condemn to stun enemies. Having 170 extra knockback distance and the 25 extra cast range is kinda a big deal. This is probably why Poppy isn't doing well in the games she's playing. She only has 300 range to stun people. That's pathetically easy to avoid. How can Poppy properly do her job if she's going to have inferior abilities to start out with? Why do people not really have to care about positioning when fighting poppy as much as vayne? Leaves a bad taste in my mouth really.\nQuestion 1: Which person is performing better in the game?\nQuestion 2: Which person is not performing better in the game?\nQuestion 3: What move does Vayne use to stun ememies?\nQuestion 4: What is Poppy's move that is used to stun enemies?",
+        "difficulty": "medium",
+        "category": ["reading comprehension"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/squad_shifts/reddit_v1.0.json"
+    },
+
+    {
+        "prompt": "Determine whether a given sentence asserts a causal, correlative, or neutral relation between two events. If the sentence asserts a causal relation respond causal, if the sentence asserts a correlative relation respond correlative, if the sentence asserts neither a causal nor a correlative relation between two events respond neutral.\nSentences:\n1.When I drink this tea, I feel less nervous.\n2.Adding ice cools the tea.",
+        "difficulty": "medium",
+        "category": ["logical reasoning", "empirical judgement"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/empirical_judgments/task.json"
+    },
+
+    {
+        "category": ["causal reasoning"],
+        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/cause_and_effect"
+    },
+
+    {
+        "category": ["commonsense reasoning", "riddle"],
+        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/riddle_sense"
+    },
+
+    {
+        "category": ["grammatical reasoning", "logical reasoning", "linguistics"],
+        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/nonsense_words_grammar"
+    },
+
+    {
+        "category": ["logical deduction"],
+        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/logical_deduction"
+    },
+
+    {
+        "category": ["logical reasoning"],
+        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/logical_args"
+    },
+
+    {
+        "category": ["logical reasoning", "common sense"],
+        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/context_definition_alignment"
     }
 ]
