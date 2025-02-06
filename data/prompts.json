@@ -58,41 +58,5 @@
         "category": ["logical reasoning", "empirical judgement"],
         "n_shots": 0,
         "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/empirical_judgments/task.json"
-    },
-
-    {
-        "difficulty": "medium",
-        "category": ["causal reasoning"],
-        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/cause_and_effect"
-    },
-
-    {
-        "difficulty": "medium",
-        "category": ["commonsense reasoning", "riddle"],
-        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/riddle_sense"
-    },
-
-    {
-        "difficulty": "medium",
-        "category": ["grammatical reasoning", "logical reasoning", "linguistics"],
-        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/nonsense_words_grammar"
-    },
-
-    {
-        "difficulty": "medium",
-        "category": ["logical deduction"],
-        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/logical_deduction"
-    },
-
-    {
-        "difficulty": "medium",
-        "category": ["logical reasoning"],
-        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/logical_args"
-    },
-
-    {
-        "difficulty": "medium",
-        "category": ["logical reasoning", "common sense"],
-        "_source": "https://github.com/google/BIG-bench/tree/main/bigbench/benchmark_tasks/context_definition_alignment"
     }
 ]
