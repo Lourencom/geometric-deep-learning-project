@@ -1,7 +1,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 
-def plot_attention_matrices(attention_matrices, aggregation="head"):
+def plot_attention_matrices(attention_matrices, aggregation="head", savepath=None):
     assert aggregation in ["head", "layer"], "Must aggregate across 'head's or 'layer's"
     
     if aggregation == "head":
@@ -18,5 +18,7 @@ def plot_attention_matrices(attention_matrices, aggregation="head"):
             plt.xlabel("Key Tokens")
             plt.ylabel("Query Tokens")
             plt.show()
+            if savepath:
+                plt.savefig(savepath)
     else:
         raise ValueError(f"Not yet implemented")
