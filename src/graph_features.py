@@ -4,35 +4,44 @@ import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
 import argparse
+from GraphRicciCurvature.FormanRicci import FormanRicci
+
 
 from attention import extract_attention
 from model import run_model
 from visualization import plot_attention_matrices
 
 class GraphFeatures:
-    def __init__(self, attn_arr: np.ndarray, max_layers: int=32):
+    def __init__(self, attn_arr: np.ndarray, max_layers: int=32, threshold: float=0.1):
         """
         attn_arr: np.ndarray
             The attention array of shape (batch_size, n_heads, n_tokens, n_tokens)
         """
         self.attn_arr = np.mean(attn_arr, axis=1) # average over heads
         self.n_tokens = self.attn_arr.shape[1]
-        self.graphs = [self.create_graph_single_attn(attn) for attn in self.attn_arr]
 
         self.feature_fn_map = {
             "clustering": self.extract_average_clustering,
-            "average_shortest_path_length": self.extract_average_shortest_path_length
+            "average_shortest_path_length": self.extract_average_shortest_path_length,
+            "forman_ricci": self.extract_forman_ricci
         }
         self.max_layers = max_layers
+        self.threshold = threshold
 
-    def create_graph_single_attn(self, attn, threshold=0.1):
+        self.create_graphs(self.attn_arr, self.threshold)
+
+    def create_graphs(self, attn_arr, threshold):
+        self.graphs = [self.__create_graph_single_attn(attn, threshold) for attn in attn_arr]
+
+    def __create_graph_single_attn(self, attn, threshold):
         """
         I am given a single attention matrix (NxN) and I want to create a graph from it.
         Edges are present if the attention weight between the ith and jth tokens is greater than the threshold.
         """
         # Create a graph from the attention matrices
         G = nx.Graph()
-        
+
+        #th_quantile = np.quantile(attn, threshold)
         # Add nodes to the graph
         for i in range(attn.shape[0]):
             G.add_node(i)
@@ -51,6 +60,18 @@ class GraphFeatures:
     def extract_average_shortest_path_length(self):
         return np.array([nx.average_shortest_path_length(G) for G in self.graphs])
     
+    def extract_forman_ricci(self):
+        frc = [FormanRicci(G) for G in self.graphs]
+        for i in range(len(frc)):
+            frc[i].compute_ricci_curvature()
+
+        edges = [frc[i].G.edges(data=True) for i in range(len(frc))]
+        curvature_hists = [
+            np.median([data['formanCurvature'] for _,_,data in e])
+            for e in edges
+        ]
+        return np.array(curvature_hists)
+    
     def __interpolate_to_max_layers(self, feature_arr):
         curr_n_layers = len(feature_arr)
         new_n_layers = self.max_layers
@@ -58,7 +79,11 @@ class GraphFeatures:
         x_new = np.linspace(0, 1, new_n_layers)
         return np.interp(x_new, x_old, feature_arr)
     
-    def extract(self, feature_name, interpolate=False):
+    def extract(self, feature_name, interpolate=False, threshold=None):
+        if threshold and threshold != self.threshold: # we can override the threshold and recreate the graphs
+            self.threshold = threshold
+            self.create_graphs(self.attn_arr, threshold)
+
         feature_arr = self.feature_fn_map[feature_name]()
         if interpolate:
             feature_arr = self.__interpolate_to_max_layers(feature_arr)
@@ -92,6 +117,7 @@ if __name__ == "__main__":
     parser.add_argument("--prompt_category", type=str, default=None)
     parser.add_argument("--prompt_n_shots", type=int, default=None)
     parser.add_argument("--output_dir", type=str, default="data/attn")
+    
     args = parser.parse_args()
 
     attn_arrs = load_attns(args)
@@ -99,22 +125,30 @@ if __name__ == "__main__":
     attn_arr_small = attn_arrs[1]
 
 
-    features=['clustering', 'average_shortest_path_length']
+    #features=['clustering', 'average_shortest_path_length', 'forman_ricci']
+    features = ['forman_ricci']
     
     graph_features_large = GraphFeatures(attn_arr_large)
     graph_features_small = GraphFeatures(attn_arr_small)
 
-    for feature in features:
-        feature_large = graph_features_large.extract(feature, interpolate=True)
-        feature_small = graph_features_small.extract(feature, interpolate=True)
+    # Create a single figure for all thresholds
+    fig = plt.figure(figsize=(12, 8))
+    #thresholds = [0.01, 0.02, 0.05, 0.1]
+    threshold = 0.02
 
-        # plot
-        fig = plt.figure(figsize=(10, 10))
-        plt.plot(feature_large, label="large")
-        plt.plot(feature_small, label="small")
-        plt.xlabel("N layers")
-        plt.ylabel(feature)
-        plt.title(f"{feature} for large and small models on a {args.prompt_difficulty} prompt")
-        plt.legend()
-        plt.show()
-        fig.savefig(args.output_dir + f"/{feature}.png")
+    for feature in features:
+        feature_large = graph_features_large.extract(feature, threshold=threshold, interpolate=True)
+        feature_small = graph_features_small.extract(feature, threshold=threshold, interpolate=True)
+        
+        # Plot with threshold-specific labels
+        plt.plot(feature_large, label=f"large (t={threshold})", linestyle='-')
+        plt.plot(feature_small, label=f"small (t={threshold})", linestyle='--')
+
+    plt.xlabel("N layers")
+    plt.ylabel(feature)
+    plt.title(f"{feature} for large and small models on a {args.prompt_difficulty} prompt")
+    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig(args.output_dir + f"/{feature}.png", bbox_inches='tight')
+    plt.show()
