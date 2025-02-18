@@ -9,6 +9,7 @@ class Prompts:
             prompts_path = os.path.join(get_git_root(), prompts_path)
         with open(prompts_path, 'r') as file:
             self.prompts = json.load(file)
+        pass
 
     def get_prompt(self, difficulty=None, category=None, n_shots=None):
         potential_prompts = self.prompts
@@ -18,4 +19,6 @@ class Prompts:
             potential_prompts = [p for p in potential_prompts if category in p['category']]
         if n_shots is not None:
             potential_prompts = [p for p in potential_prompts if p['n_shots'] == n_shots]
-        return random.choice(potential_prompts)['prompt']
+        
+        sampled_prompt = random.choice(potential_prompts)
+        return sampled_prompt

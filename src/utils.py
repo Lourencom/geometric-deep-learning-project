@@ -43,3 +43,15 @@ def get_model_and_tokenizer(model_size):
     else:
         raise ValueError(f"Invalid model size: {model_size}")
     return model, tokenizer
+
+
+def filter_prompts(prompts, prompt_difficulty, prompt_category, prompt_n_shots, model_size):
+    if prompt_difficulty is not None:
+        prompts = [p for p in prompts if prompt_difficulty in p]
+    if prompt_category is not None:
+        prompts = [p for p in prompts if prompt_category in p]
+    if prompt_n_shots is not None:
+        prompts = [p for p in prompts if prompt_n_shots in p]
+    if model_size is not None:
+        prompts = [p for p in prompts if model_size in p]
+    return prompts

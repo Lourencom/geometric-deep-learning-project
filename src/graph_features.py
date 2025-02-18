@@ -5,8 +5,9 @@ import networkx as nx
 import matplotlib.pyplot as plt
 import argparse
 from GraphRicciCurvature.FormanRicci import FormanRicci
+from GraphRicciCurvature.OllivierRicci import OllivierRicci
 
-
+from utils import filter_prompts
 from attention import extract_attention
 from model import run_model
 from visualization import plot_attention_matrices
@@ -23,7 +24,8 @@ class GraphFeatures:
         self.feature_fn_map = {
             "clustering": self.extract_average_clustering,
             "average_shortest_path_length": self.extract_average_shortest_path_length,
-            "forman_ricci": self.extract_forman_ricci
+            "forman_ricci": self.extract_forman_ricci,
+            "ollivier_ricci": self.extract_ollivier_ricci
         }
         self.max_layers = max_layers
         self.threshold = threshold
@@ -60,17 +62,31 @@ class GraphFeatures:
     def extract_average_shortest_path_length(self):
         return np.array([nx.average_shortest_path_length(G) for G in self.graphs])
     
+    def extract_ollivier_ricci(self):
+        self.create_graphs(self.attn_arr, 0)
+        orc = [OllivierRicci(G) for G in self.graphs]
+        for i in range(len(orc)):
+            orc[i].compute_ricci_curvature()
+
+        edges = [orc[i].G.edges(data=True) for i in range(len(orc))]
+        medians = [
+            np.median([data['ricciCurvature'] for _,_,data in e])
+            for e in edges
+        ]
+        return np.array(medians)
+    
+
     def extract_forman_ricci(self):
         frc = [FormanRicci(G) for G in self.graphs]
         for i in range(len(frc)):
             frc[i].compute_ricci_curvature()
 
         edges = [frc[i].G.edges(data=True) for i in range(len(frc))]
-        curvature_hists = [
+        medians = [
             np.median([data['formanCurvature'] for _,_,data in e])
             for e in edges
         ]
-        return np.array(curvature_hists)
+        return np.array(medians)
     
     def __interpolate_to_max_layers(self, feature_arr):
         curr_n_layers = len(feature_arr)
@@ -89,10 +105,11 @@ class GraphFeatures:
             feature_arr = self.__interpolate_to_max_layers(feature_arr)
         return feature_arr
     
-    
 def get_cached_attention(args, model_size):
-    cached_attentions = [el for el in os.listdir(args.output_dir) if "attention_values" in el and el.endswith(".npy")]
-    cached_attentions = [el for el in cached_attentions if model_size in el]
+    cached_attentions = [el for el in os.listdir(args.attn_dir) if "attention_values" in el and el.endswith(".npy")]
+    
+    cached_attentions = filter_prompts(cached_attentions, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots, model_size)
+    
     return cached_attentions
 
 def load_attns(args, model_sizes=["large", "small"]):
@@ -105,18 +122,18 @@ def load_attns(args, model_sizes=["large", "small"]):
             attn_arr = extract_attention(args, outputs)
             np.save(args.output_dir + "/" + f"attention_values_{model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.npy", attn_arr)
         else:
-            attn_arr = np.load(args.output_dir + "/" + cached_attentions[0])
+            attn_arr = np.load(args.attn_dir + "/" + cached_attentions[0])
         attn_arrs.append(attn_arr)
     return attn_arrs
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--prompt_path", type=str, default="data/prompts.json")
+    parser.add_argument("--attn_dir", type=str, default="data/attn")
     parser.add_argument("--prompt_difficulty", type=str, default="medium")
     parser.add_argument("--prompt_category", type=str, default=None)
     parser.add_argument("--prompt_n_shots", type=int, default=None)
-    parser.add_argument("--output_dir", type=str, default="data/attn")
+    parser.add_argument("--output_dir", type=str, default="media/feature_plots")
     
     args = parser.parse_args()
 
@@ -126,15 +143,18 @@ if __name__ == "__main__":
 
 
     #features=['clustering', 'average_shortest_path_length', 'forman_ricci']
-    features = ['forman_ricci']
+    features = ['ollivier_ricci']
     
     graph_features_large = GraphFeatures(attn_arr_large)
     graph_features_small = GraphFeatures(attn_arr_small)
 
+
+    os.makedirs(args.output_dir, exist_ok=True)
+
     # Create a single figure for all thresholds
     fig = plt.figure(figsize=(12, 8))
     #thresholds = [0.01, 0.02, 0.05, 0.1]
-    threshold = 0.02
+    threshold = 0.01
 
     for feature in features:
         feature_large = graph_features_large.extract(feature, threshold=threshold, interpolate=True)
@@ -150,5 +170,5 @@ if __name__ == "__main__":
     plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig(args.output_dir + f"/{feature}.png", bbox_inches='tight')
+    plt.savefig(args.output_dir + f"/{feature}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.png", bbox_inches='tight')
     plt.show()

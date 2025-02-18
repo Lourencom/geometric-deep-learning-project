@@ -15,7 +15,8 @@ def run_model(args):
         n_shots=args.prompt_n_shots
     )
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    prompt_text = prompt['prompt']
+    inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
 
     with torch.no_grad():
         outputs = model(**inputs, output_attentions=True)
@@ -37,19 +38,19 @@ def run_model(args):
         # Only decode the newly generated tokens
         answer = tokenizer.decode(generated_ids[0][input_length:], skip_special_tokens=True)
     
-    return outputs, answer, prompt
+    return outputs, answer, prompt_text, prompt['difficulty'], prompt['category'], prompt['n_shots']
 
 
-def store_answer(args, answer, prompt):
+def store_answer(args, answer, prompt_text, prompt_difficulty, prompt_category, prompt_n_shots):
     git_root_path = get_git_root()
     output_dir = os.path.join(git_root_path, args.output_dir)
     os.makedirs(output_dir, exist_ok=True)
     
     # Save the prompt and the answer to a text file for reference
-    answer_file = os.path.join(output_dir, f"generated_answer_{args.model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.txt")
+    answer_file = os.path.join(output_dir, f"generated_answer_{args.model_size}_{prompt_difficulty}_{prompt_category}_{prompt_n_shots}.txt")
     with open(answer_file, "w") as f:
         f.write("Prompt:\n")
-        f.write(prompt + "\n\n")
+        f.write(prompt_text + "\n\n")
         f.write("Generated Answer:\n")
         f.write(answer)
     return answer_file
