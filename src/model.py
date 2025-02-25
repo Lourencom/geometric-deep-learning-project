@@ -19,12 +19,12 @@ def run_model(args):
     inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
 
     with torch.no_grad():
-        outputs = model(**inputs, output_attentions=True)
+        prompt_outputs = model(**inputs, output_attentions=True)
 
     with torch.no_grad():
         # Get the length of input tokens to separate prompt from generation
         input_length = inputs.input_ids.shape[1]
-        generated_ids = model.generate(
+        generated = model.generate(
             **inputs,
             max_new_tokens=512,
             num_beams=4,  # Enable beam search
@@ -33,12 +33,16 @@ def run_model(args):
             early_stopping=True,
             #do_sample=False,  # Deterministic generation
             #temperature=1.0,
-            no_repeat_ngram_size=3  # Prevent repetitive text
+            return_dict_in_generate=True,
+            no_repeat_ngram_size=3,  # Prevent repetitive text
+            output_attentions=True,
         )
         # Only decode the newly generated tokens
-        answer = tokenizer.decode(generated_ids[0][input_length:], skip_special_tokens=True)
+        answer = tokenizer.decode(generated[0][input_length:], skip_special_tokens=True)
     
-    return outputs, answer, prompt_text, prompt['difficulty'], prompt['category'], prompt['n_shots']
+    intermediate_outputs = generated
+    
+    return [prompt_outputs, intermediate_outputs], answer, prompt_text, prompt['difficulty'], prompt['category'], prompt['n_shots']
 
 
 def store_answer(args, answer, prompt_text, prompt_difficulty, prompt_category, prompt_n_shots):
