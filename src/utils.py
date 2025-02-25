@@ -15,6 +15,9 @@ def get_git_root():
     except subprocess.CalledProcessError:
         return None  # Not inside a Git repository
     
+def relative_to_absolute_path(path):
+    return os.path.join(get_git_root(), path)
+    
 def get_model_and_tokenizer(model_size):
     if model_size == "small":
         model = transformers.AutoModelForCausalLM.from_pretrained(
