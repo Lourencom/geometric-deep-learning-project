@@ -12,6 +12,7 @@ from attention import extract_attention
 from model import run_model
 from visualization import plot_attention_matrix
 from utils import relative_to_absolute_path
+from args import get_args
 
 def aggregate_attention_layers(attn_matrices):
     """
@@ -163,14 +164,10 @@ def load_attns(args, model_sizes=["large", "small"]):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--attn_dir", type=str, default="data/attn")
-    parser.add_argument("--prompt_difficulty", type=str, default="medium")
-    parser.add_argument("--prompt_category", type=str, default=None)
-    parser.add_argument("--prompt_n_shots", type=int, default=None)
-    parser.add_argument("--output_dir", type=str, default="media/feature_plots")
-    
-    args = parser.parse_args()
+    args = get_args()
+    args.output_dir = "media/feature_plots"  # Override default for graph features
+
+    attn_dicts = load_attns(args)
 
     attn_arrs = load_attns(args)
     attn_arr_large = attn_arrs[0]
