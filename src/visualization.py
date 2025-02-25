@@ -10,3 +10,4 @@ def plot_attention_matrix(attention_matrix, savepath=None):
     plt.show()
     if savepath:
         plt.savefig(savepath)
+    plt.close()
