@@ -10,7 +10,32 @@ from GraphRicciCurvature.OllivierRicci import OllivierRicci
 from utils import filter_prompts
 from attention import extract_attention
 from model import run_model
-from visualization import plot_attention_matrices
+from visualization import plot_attention_matrix
+from utils import relative_to_absolute_path
+
+def aggregate_attention_layers(attn_matrices):
+    """
+    Aggregates a list of attention matrices using matrix multiplication.
+    
+    Parameters:
+        attn_matrices (list of np.ndarray): 
+            List of attention matrices where each matrix is of shape (n_tokens, n_tokens).
+            The list should be ordered from the first layer to the last layer.
+            
+    Returns:
+        np.ndarray: Aggregated attention matrix of shape (n_tokens, n_tokens) that 
+                    represents the overall information flow across layers.
+                    
+    Example:
+        For two layers, the aggregated attention is computed as:
+            A_agg = A_layer2 @ A_layer1
+    """
+    # Start with the first layer's attention matrix.
+    A_agg = attn_matrices[0]
+    # Multiply successively by the next layer's attention matrix.
+    for attn in attn_matrices[1:]:
+        A_agg = np.dot(attn, A_agg)
+    return A_agg
 
 class GraphFeatures:
     def __init__(self, attn_arr: np.ndarray, max_layers: int=32, threshold: float=0.1):
@@ -25,7 +50,8 @@ class GraphFeatures:
             "clustering": self.extract_average_clustering,
             "average_shortest_path_length": self.extract_average_shortest_path_length,
             "forman_ricci": self.extract_forman_ricci,
-            "ollivier_ricci": self.extract_ollivier_ricci
+            "ollivier_ricci": self.extract_ollivier_ricci,
+            "average_degree": self.extract_average_node_degree,
         }
         self.max_layers = max_layers
         self.threshold = threshold
@@ -33,7 +59,8 @@ class GraphFeatures:
         self.create_graphs(self.attn_arr, self.threshold)
 
     def create_graphs(self, attn_arr, threshold):
-        self.graphs = [self.__create_graph_single_attn(attn, threshold) for attn in attn_arr]
+        aggregated_attn = aggregate_attention_layers(attn_arr)
+        self.graphs = [self.__create_graph_single_attn(aggregated_attn, threshold)]
 
     def __create_graph_single_attn(self, attn, threshold):
         """
@@ -56,6 +83,14 @@ class GraphFeatures:
         
         return G
     
+    def extract_average_node_degree(self):
+        avg_degrees = []
+        for G in self.graphs:
+            node_degrees = G.degree()
+            avg_degree = np.mean(node_degrees)
+            avg_degrees.append(avg_degree)
+        return np.array(avg_degrees)
+
     def extract_average_clustering(self):
         return np.array([nx.average_clustering(G) for G in self.graphs])
     
@@ -106,7 +141,7 @@ class GraphFeatures:
         return feature_arr
     
 def get_cached_attention(args, model_size):
-    cached_attentions = [el for el in os.listdir(args.attn_dir) if "attention_values" in el and el.endswith(".npy")]
+    cached_attentions = [el for el in os.listdir(relative_to_absolute_path(args.attn_dir)) if "attention_values" in el and el.endswith(".npy")]
     
     cached_attentions = filter_prompts(cached_attentions, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots, model_size)
     
@@ -120,9 +155,9 @@ def load_attns(args, model_sizes=["large", "small"]):
             args.model_size = model_size
             outputs, _, _ = run_model(args)
             attn_arr = extract_attention(args, outputs)
-            np.save(args.output_dir + "/" + f"attention_values_{model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.npy", attn_arr)
+            np.save(relative_to_absolute_path(args.output_dir) + "/" + f"attention_values_{model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.npy", attn_arr)
         else:
-            attn_arr = np.load(args.attn_dir + "/" + cached_attentions[0])
+            attn_arr = np.load(relative_to_absolute_path(args.attn_dir) + "/" + cached_attentions[0])
         attn_arrs.append(attn_arr)
     return attn_arrs
 
@@ -142,33 +177,39 @@ if __name__ == "__main__":
     attn_arr_small = attn_arrs[1]
 
 
-    #features=['clustering', 'average_shortest_path_length', 'forman_ricci']
-    features = ['ollivier_ricci']
+    features=['clustering', 'average_shortest_path_length', 
+              'forman_ricci', 'ollivier_ricci', 'average_degree']
     
     graph_features_large = GraphFeatures(attn_arr_large)
     graph_features_small = GraphFeatures(attn_arr_small)
 
 
-    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(relative_to_absolute_path(args.output_dir), exist_ok=True)
 
     # Create a single figure for all thresholds
     fig = plt.figure(figsize=(12, 8))
     #thresholds = [0.01, 0.02, 0.05, 0.1]
     threshold = 0.01
 
+    #breakpoint()
+
     for feature in features:
         feature_large = graph_features_large.extract(feature, threshold=threshold, interpolate=True)
         feature_small = graph_features_small.extract(feature, threshold=threshold, interpolate=True)
         
-        # Plot with threshold-specific labels
-        plt.plot(feature_large, label=f"large (t={threshold})", linestyle='-')
-        plt.plot(feature_small, label=f"small (t={threshold})", linestyle='--')
+        fig, ax = plt.subplots(figsize=(12, 8))
 
-    plt.xlabel("N layers")
-    plt.ylabel(feature)
-    plt.title(f"{feature} for large and small models on a {args.prompt_difficulty} prompt")
-    plt.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
-    plt.grid(True)
-    plt.tight_layout()
-    plt.savefig(args.output_dir + f"/{feature}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.png", bbox_inches='tight')
-    plt.show()
+        # Plot with threshold-specific labels
+        ax.plot(feature_large, label=f"large (t={threshold})", linestyle='-')
+        ax.plot(feature_small, label=f"small (t={threshold})", linestyle='--')
+
+        ax.set_xlabel("N layers")
+        ax.set_ylabel(feature)
+        ax.set_title(f"{feature} for large and small models on a {args.prompt_difficulty} prompt")
+        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.grid(True)
+        
+        plt.tight_layout()
+        plt.savefig(relative_to_absolute_path(args.output_dir) + f"/{feature}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.png", bbox_inches='tight')
+        plt.show()
+        plt.close(fig)
