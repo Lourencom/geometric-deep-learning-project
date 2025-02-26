@@ -19,9 +19,8 @@ def create_graph_single_attn(attn, **kwargs):
     top_k = kwargs.get("top_k", attn.shape[0])
 
     # Create a graph from the attention matrices
-    G = nx.Graph()
+    G = nx.DiGraph()
 
-    #th_quantile = np.quantile(attn, threshold)
     # Add nodes to the graph
     for i in range(attn.shape[0]):
         G.add_node(i)
@@ -31,15 +30,15 @@ def create_graph_single_attn(attn, **kwargs):
         top_indices = np.argsort(attn[i, :])[:top_k]
         for j in top_indices:
             if i != j: # FIXME: we are removing self-attention, why pavle?
-                G.add_edge(i, j)
+                G.add_edge(i, j, weight=attn[i, j])
     return G
 
 
 class GraphFeatures:
     def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int=32, analysis_type = "layerwise", **kwargs):
         """
-        attn_timestep_arr: np.ndarray
-            The attention array of shape (timesteps, layers, batch_size, n_heads, n_tokens, n_tokens)
+        attn_timestep_arr: np.ndarray -> for now its simply the prompt attentions
+        Shape 4D: (layers, heads, n_query, n_key)
         """
 
         if analysis_type != "layerwise":
@@ -48,10 +47,10 @@ class GraphFeatures:
             raise NotImplementedError("Only prompt analysis is supported for now")
 
         self.max_layers = max_layers
-        self.threshold = kwargs.get("threshold", 0.0)
         self.prompt_attn = kwargs.get("prompt_attn", False)
         self.top_k = kwargs.get("top_k", None) # choose top k edges
         self.attn_timestep_arr = attn_timestep_arr
+        self.analysis_type = analysis_type
         #self.n_tokens = self.attn_arr.shape[1]
 
         self.feature_fn_map = {
@@ -66,22 +65,29 @@ class GraphFeatures:
 
     def create_graphs(self, attn_arr, **kwargs):
         graphs = []
+        if self.prompt_attn:
+            attn_avg = np.mean(attn_arr, axis=1) # avg over heads
 
-        if not self.prompt_attn:
+            if self.analysis_type == "aggregated_layers":
+                attn = aggregate_attention_layers(attn_avg) # aggregate over layers
+                graphs.append(create_graph_single_attn(attn, **kwargs))
+            elif self.analysis_type == "layerwise":
+                for i in range(attn_avg.shape[0]):
+                    attn = attn_avg[i]
+                    graphs.append(create_graph_single_attn(attn, **kwargs))    
+            else:
+                raise NotImplementedError("Invalid analysis type")
+            
+        else:
             raise NotImplementedError("Intermediate attention not implemented, has diff shapes")
 
-        for attn in attn_arr:
-            attn_avg = np.mean(attn, axis=1) # avg over heads
-            aggregated_attn = aggregate_attention_layers(attn_avg) # aggregate over layers
-            graphs.append(create_graph_single_attn(aggregated_attn, **kwargs))    
-            
         return graphs
 
     def plot_attention_matrices(self, save_path):
-        for attn_graph in self.attn_graphs:
-            plot_attention_matrix(nx.to_numpy_array(attn_graph), save_path)
+        for i, attn_graph in enumerate(self.attn_graphs):
+            plot_attention_matrix(nx.to_numpy_array(attn_graph), save_path + f"_{i}")
     
-    def extract_average_node_degree(self):
+    def extract_average_node_degree(self, **kwargs):
         avg_degrees = []
         for G in self.attn_graphs:
             node_degrees = G.degree()
@@ -89,13 +95,13 @@ class GraphFeatures:
             avg_degrees.append(avg_degree)
         return np.array(avg_degrees)
 
-    def extract_average_clustering(self):
+    def extract_average_clustering(self, **kwargs):
         return np.array([nx.average_clustering(G) for G in self.attn_graphs])
     
-    def extract_average_shortest_path_length(self):
+    def extract_average_shortest_path_length(self, **kwargs):
         return np.array([nx.average_shortest_path_length(G) for G in self.attn_graphs])
     
-    def extract_ollivier_ricci(self):
+    def extract_ollivier_ricci(self, **kwargs):
         orc = [OllivierRicci(G) for G in self.attn_graphs]
         for i in range(len(orc)):
             orc[i].compute_ricci_curvature()
@@ -108,7 +114,7 @@ class GraphFeatures:
         return np.array(medians)
     
 
-    def extract_forman_ricci(self):
+    def extract_forman_ricci(self, **kwargs):
         frc = [FormanRicci(G) for G in self.attn_graphs]
         for i in range(len(frc)):
             frc[i].compute_ricci_curvature()
@@ -127,59 +133,43 @@ class GraphFeatures:
         x_new = np.linspace(0, 1, new_n_layers)
         return np.interp(x_new, x_old, feature_arr)
     
-    def extract(self, feature_name, interpolate=False, threshold=None):
-        if threshold and threshold != self.threshold: # we can override the threshold and recreate the graphs
-            self.threshold = threshold
-            self.attn_graphs = self.create_graphs(self.attn_timestep_arr, threshold=threshold)
+    def extract(self, feature_name, **kwargs):
+        interpolate = kwargs.get("interpolate", False)
+        top_k = kwargs.get("top_k", self.top_k)
+        
+        if top_k != self.top_k: # recreate graphs with new top_k
+            self.top_k = top_k
+            self.attn_graphs = self.create_graphs(self.attn_timestep_arr, top_k=top_k)
 
-        feature_arr = self.feature_fn_map[feature_name]()
+        feature_arr = self.feature_fn_map[feature_name](**kwargs)
         if interpolate:
             feature_arr = self.__interpolate_to_max_layers(feature_arr)
         return feature_arr
-    
-def get_cached_attention(args, model_size):
-    cached_attention_files = [el for el in os.listdir(relative_to_absolute_path(args.attn_dir))
-                        if "attention_values" in el and el.endswith(".npy")]
-    
-    cached_attentions = filter_prompts(cached_attention_files, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots, model_size)
-    
-    return cached_attentions
-
-def load_attns(args, model_sizes=["small", "large"]):
-    attn_dicts = []
-    for model_size in model_sizes:
-        cached_attentions = get_cached_attention(args, model_size)
-        attn_path = relative_to_absolute_path(args.attn_dir)
-        if len(cached_attentions) == 0:
-            args.model_size = model_size
-            outputs, *_ = run_model(args)
-            attn_dict = extract_attention(args, outputs, save=False)
-        else:
-            loaded = np.load(os.path.join(attn_path, cached_attentions[0]))
-            attn_dict = loaded.item() if isinstance(loaded, np.ndarray) else loaded
-        attn_dicts.append(attn_dict)
-    return attn_dicts
 
 
 if __name__ == "__main__":
     args = get_args()
     args.output_dir = "media/feature_plots"  # Override default for graph features
+    os.makedirs(relative_to_absolute_path(args.output_dir), exist_ok=True)
 
     attn_dicts = load_attns(args)
 
-    breakpoint()
+    #breakpoint()
 
-    attn_arr_prompt_small = attn_dicts[0]["prompt_attns"]
-    attn_arr_prompt_large = attn_dicts[1]["prompt_attns"]
+    small_attns, large_attns = attn_dicts
 
-    attn_arr_intermediate_small = attn_dicts[0]["intermediate_attns"]
-    attn_arr_intermediate_large = attn_dicts[1]["intermediate_attns"]
+    attn_arr_prompt_small = small_attns["prompt_attns"]
+    #attn_arr_intermediate_small = small_attns["intermediate_attns"]
+    
+    attn_arr_prompt_large = large_attns["prompt_attns"]
+    #attn_arr_intermediate_large = large_attns["intermediate_attns"]
 
-    # intermediate attns also have beam dimension, I need to see how to handle that
-
-
-    features=['clustering', 'average_shortest_path_length', 
-              'forman_ricci', 'ollivier_ricci', 'average_degree']
+    features=['clustering', 
+              'average_shortest_path_length', 
+              'forman_ricci',
+              #'ollivier_ricci',
+              'average_degree'
+              ]
     
     graph_features_small = GraphFeatures(attn_arr_prompt_small, prompt_attn=True)
     graph_features_large = GraphFeatures(attn_arr_prompt_large, prompt_attn=True)
@@ -187,23 +177,20 @@ if __name__ == "__main__":
     # graph_features_intermediate_small = GraphFeatures(attn_arr_intermediate_small, prompt_attn=False)
     # graph_features_intermediate_large = GraphFeatures(attn_arr_intermediate_large, prompt_attn=False)
 
-    os.makedirs(relative_to_absolute_path(args.output_dir), exist_ok=True)
-
-    # Create a single figure for all thresholds
+    graph_features_small.plot_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_small_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
+    graph_features_large.plot_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_large_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
+   
     fig = plt.figure(figsize=(12, 8))
-    #thresholds = [0.01, 0.02, 0.05, 0.1]
-    threshold = 0.01
-
 
     for feature in features:
-        feature_large = graph_features_large.extract(feature, threshold=threshold, interpolate=True)
-        feature_small = graph_features_small.extract(feature, threshold=threshold, interpolate=True)
+        print(feature)
+        feature_large = graph_features_large.extract(feature, interpolate=True, max_layers=32)
+        feature_small = graph_features_small.extract(feature, interpolate=True, max_layers=32)
         
         fig, ax = plt.subplots(figsize=(12, 8))
 
-        # Plot with threshold-specific labels
-        ax.plot(feature_large, label=f"large (t={threshold})", linestyle='-')
-        ax.plot(feature_small, label=f"small (t={threshold})", linestyle='--')
+        ax.plot(feature_large, label=f"large", linestyle='-')
+        ax.plot(feature_small, label=f"small", linestyle='--')
 
         ax.set_xlabel("timesteps")
         ax.set_ylabel(feature)
@@ -212,10 +199,9 @@ if __name__ == "__main__":
         ax.grid(True)
         
         plt.tight_layout()
-        savefig_path = relative_to_absolute_path(args.output_dir) + f"/prompt_{feature}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.png"
-        plt.savefig(savefig_path, bbox_inches='tight')
+        savefig_path = relative_to_absolute_path(args.output_dir) + f"/prompt_{feature}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}"
+        plt.savefig(savefig_path + ".png", bbox_inches='tight')
         plt.show()
         plt.close(fig)
 
-    graph_features_small.plot_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_small_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.png")
-    graph_features_large.plot_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_large_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.png")
+    print("Done")
