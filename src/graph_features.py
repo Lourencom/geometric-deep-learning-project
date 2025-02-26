@@ -189,19 +189,13 @@ class GraphFeatures:
 
 def main():
     args = get_args()
-    args.output_dir = "media/feature_plots"  # Override default for graph features
-    os.makedirs(relative_to_absolute_path(args.output_dir), exist_ok=True)
-    args.output_dir = relative_to_absolute_path(args.output_dir)
+    args.output_dir = relative_to_absolute_path("media/feature_plots")  # Override default for graph features
+    os.makedirs(args.output_dir, exist_ok=True)
 
     base_filename = f"{args.prompt_id}"
 
-    attn_dicts = load_attns(args)
-    small_attns, large_attns = attn_dicts
-
-    attn_arr_prompt_small = small_attns["prompt_attns"]    
-    attn_arr_prompt_large = large_attns["prompt_attns"]
-    #attn_arr_intermediate_small = small_attns["intermediate_attns"]
-    #attn_arr_intermediate_large = large_attns["intermediate_attns"]
+    stored_prompt_attns = load_attns(args, attn_dir=args.attn_dir,save=True)
+    attn_arr_prompt_small, attn_arr_prompt_large = stored_prompt_attns
 
     graph_features_small = GraphFeatures(attn_arr_prompt_small, prompt_attn=True, remove_attention_sink=True)
     graph_features_large = GraphFeatures(attn_arr_prompt_large, prompt_attn=True, remove_attention_sink=True)

@@ -5,5 +5,5 @@ from attention import extract_attention
 if __name__ == "__main__":
     args = get_args()
     outputs, answer, prompt_text, prompt_difficulty, prompt_category, prompt_n_shots = run_model(args)
-    extract_attention(args, outputs)
+    extract_attention(args, outputs, args.attn_dir, save=True)
     store_answer(args, answer, prompt_text, prompt_difficulty, prompt_category, prompt_n_shots)
