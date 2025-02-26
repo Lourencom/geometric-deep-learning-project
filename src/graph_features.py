@@ -9,6 +9,8 @@ from attention import aggregate_attention_layers, load_attns
 from visualization import plot_attention_matrix
 from utils import relative_to_absolute_path
 from args import get_args
+import math
+import seaborn as sns
 
 
 def create_graph_single_attn(attn, **kwargs):
@@ -82,6 +84,39 @@ class GraphFeatures:
             raise NotImplementedError("Intermediate attention not implemented, has diff shapes")
 
         return graphs
+
+    def plot_layerwise_attention_matrices(self, save_path):
+        if self.analysis_type != "layerwise":
+            raise NotImplementedError("Only layerwise analysis is supported for now")
+        
+        n = len(self.attn_graphs)
+        # Determine grid dimensions (roughly square)
+        cols = math.ceil(math.sqrt(n))
+        rows = math.ceil(n / cols)
+        
+        fig, axes = plt.subplots(rows, cols, figsize=(cols*6, rows*5))
+        # If only one subplot, wrap it in a list for consistency
+        if n == 1:
+            axes = [axes]
+        else:
+            axes = axes.flatten()
+        
+        for i, attn_graph in enumerate(self.attn_graphs):
+            ax = axes[i]
+            attn_matrix = nx.to_numpy_array(attn_graph)
+            sns.heatmap(attn_matrix, cmap="Reds", ax=ax, cbar=False)
+            ax.set_title(f"Layer {i}")
+            ax.set_xlabel("Key Tokens")
+            ax.set_ylabel("Query Tokens")
+        
+        # Remove any unused subplots if n is not a perfect grid
+        for j in range(i + 1, len(axes)):
+            fig.delaxes(axes[j])
+        
+        plt.tight_layout()
+        plt.savefig(save_path + ".png", bbox_inches='tight')
+        plt.close(fig)
+
 
     def plot_attention_matrices(self, save_path):
         for i, attn_graph in enumerate(self.attn_graphs):
@@ -177,8 +212,8 @@ if __name__ == "__main__":
     # graph_features_intermediate_small = GraphFeatures(attn_arr_intermediate_small, prompt_attn=False)
     # graph_features_intermediate_large = GraphFeatures(attn_arr_intermediate_large, prompt_attn=False)
 
-    graph_features_small.plot_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_small_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
-    graph_features_large.plot_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_large_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
+    graph_features_small.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_small_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
+    graph_features_large.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_large_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
    
     fig = plt.figure(figsize=(12, 8))
 
