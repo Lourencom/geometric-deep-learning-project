@@ -8,7 +8,8 @@ def get_args():
     
     # Prompt arguments
     parser.add_argument("--prompt_path", type=str, default="data/prompts.json", help="Path to the prompts JSON file")
-    parser.add_argument("--prompt_difficulty", type=str, default="medium", help="Difficulty level of the prompt")
+    parser.add_argument("--prompt_id", type=int, default=None, required=True, help="ID of the specific prompt to use")
+    parser.add_argument("--prompt_difficulty", type=str, default=None, help="Difficulty level of the prompt")
     parser.add_argument("--prompt_category", type=str, default=None, help="Category of the prompt")
     parser.add_argument("--prompt_n_shots", type=int, default=None, help="Number of shots for few-shot learning")
     

@@ -17,6 +17,8 @@ def create_graph_single_attn(attn, **kwargs):
     """
     I am given a single attention matrix (NxN) and I want to create a graph from it.
     Edges are chosen based on the top k values in the attention matrix.
+
+    Selects top k outgoing edges (query -> keys) for each query node.
     """
     top_k = kwargs.get("top_k", attn.shape[0])
 
@@ -29,7 +31,7 @@ def create_graph_single_attn(attn, **kwargs):
     
     # Add edges to the graph
     for i in range(attn.shape[0]):
-        top_indices = np.argsort(attn[i, :])[:top_k]
+        top_indices = np.argsort(attn[i, :])[-top_k:]
         for j in top_indices:
             if i != j: # FIXME: we are removing self-attention, why pavle?
                 G.add_edge(i, j, weight=attn[i, j])
@@ -185,61 +187,64 @@ class GraphFeatures:
         return feature_arr
 
 
-if __name__ == "__main__":
+def main():
     args = get_args()
     args.output_dir = "media/feature_plots"  # Override default for graph features
     os.makedirs(relative_to_absolute_path(args.output_dir), exist_ok=True)
+    args.output_dir = relative_to_absolute_path(args.output_dir)
+
+    base_filename = f"{args.prompt_id}"
 
     attn_dicts = load_attns(args)
-
-    #breakpoint()
-
     small_attns, large_attns = attn_dicts
 
-    attn_arr_prompt_small = small_attns["prompt_attns"]
-    #attn_arr_intermediate_small = small_attns["intermediate_attns"]
-    
+    attn_arr_prompt_small = small_attns["prompt_attns"]    
     attn_arr_prompt_large = large_attns["prompt_attns"]
+    #attn_arr_intermediate_small = small_attns["intermediate_attns"]
     #attn_arr_intermediate_large = large_attns["intermediate_attns"]
 
-    features=['clustering', 
-              'average_shortest_path_length', 
-              'forman_ricci',
-              #'ollivier_ricci',
-              'average_degree'
-              ]
-    
     graph_features_small = GraphFeatures(attn_arr_prompt_small, prompt_attn=True, remove_attention_sink=True)
     graph_features_large = GraphFeatures(attn_arr_prompt_large, prompt_attn=True, remove_attention_sink=True)
-
     # graph_features_intermediate_small = GraphFeatures(attn_arr_intermediate_small, prompt_attn=False)
     # graph_features_intermediate_large = GraphFeatures(attn_arr_intermediate_large, prompt_attn=False)
 
-    graph_features_small.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_small_no_sink_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
-    graph_features_large.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_large_no_sink_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
-   
-    fig = plt.figure(figsize=(12, 8))
+    small_matrix_filename = os.path.join(args.output_dir, f"{base_filename}_small_no_sink_layerwise")
+    large_matrix_filename = os.path.join(args.output_dir, f"{base_filename}_large_no_sink_layerwise")
 
+    graph_features_small.plot_layerwise_attention_matrices(small_matrix_filename)
+    graph_features_large.plot_layerwise_attention_matrices(large_matrix_filename)
+
+    features = [
+        'clustering', 
+        'average_shortest_path_length', 
+        'forman_ricci',
+        #'ollivier_ricci',
+        'average_degree'
+    ]
+
+    fig = plt.figure(figsize=(12, 8))
     for feature in features:
-        print(feature)
-        feature_large = graph_features_large.extract(feature, interpolate=True, max_layers=32)
+        print(f"Running {feature}...")
         feature_small = graph_features_small.extract(feature, interpolate=True, max_layers=32)
+        feature_large = graph_features_large.extract(feature, interpolate=True, max_layers=32)
         
         fig, ax = plt.subplots(figsize=(12, 8))
-
-        ax.plot(feature_large, label=f"large", linestyle='-')
         ax.plot(feature_small, label=f"small", linestyle='--')
-
-        ax.set_xlabel("timesteps")
+        ax.plot(feature_large, label=f"large", linestyle='-')
+        ax.set_xlabel("Layers")
         ax.set_ylabel(feature)
-        ax.set_title(f"{feature} for large and small models on a {args.prompt_difficulty} prompt")
+        ax.set_title(f"{feature} for large and small models on prompt {args.prompt_id}")
         ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         ax.grid(True)
         
         plt.tight_layout()
-        savefig_path = relative_to_absolute_path(args.output_dir) + f"/prompt_{feature}_no_sink_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}"
+        savefig_path = os.path.join(args.output_dir, f"{base_filename}_{feature}_no_sink_layerwise")
         plt.savefig(savefig_path + ".png", bbox_inches='tight')
         plt.show()
         plt.close(fig)
 
     print("Done")
+
+
+if __name__ == "__main__":
+    main()

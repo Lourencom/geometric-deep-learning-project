@@ -10,6 +10,7 @@ def run_model(args):
 
     prompts = Prompts(args.prompt_path)       
     prompt = prompts.get_prompt(
+        prompt_id=args.prompt_id,
         difficulty=args.prompt_difficulty,
         category=args.prompt_category,
         n_shots=args.prompt_n_shots

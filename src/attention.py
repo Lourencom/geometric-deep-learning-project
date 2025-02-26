@@ -33,8 +33,8 @@ def extract_attention(args, outputs, save=False):
 
     if save:
         # FIXME: doesnt work for now
-        prompt_attns_filename = os.path.join(output_dir, f"attention_values_{args.model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.npy")
-        intermediate_attns_filename = os.path.join(output_dir, f"intermediate_attention_values_{args.model_size}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}.npy")
+        prompt_attns_filename = os.path.join(output_dir, f"attention_values_{args.model_size}_{args.prompt_id}.npy")
+        intermediate_attns_filename = os.path.join(output_dir, f"intermediate_attention_values_{args.model_size}_{args.prompt_id}.npy")
         np.save(prompt_attns_filename, attention_arrays, allow_pickle=True) 
         np.save(intermediate_attns_filename, intermediate_attention_arrays, allow_pickle=True)
     return {"prompt_attns": attention_arrays, "intermediate_attns": intermediate_attention_arrays}
