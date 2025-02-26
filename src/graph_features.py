@@ -187,26 +187,24 @@ class GraphFeatures:
         return feature_arr
 
 
-def main():
-    args = get_args()
-    args.output_dir = relative_to_absolute_path("media/feature_plots")  # Override default for graph features
-    os.makedirs(args.output_dir, exist_ok=True)
+def analyze_prompt(args, prompt_id):
+    """Run the analysis for a single prompt"""
+    args.prompt_id = prompt_id  # Set current prompt ID
+    print(f"\nAnalyzing prompt {prompt_id}...")
 
-    base_filename = f"{args.prompt_id}"
-
-    stored_prompt_attns = load_attns(args, attn_dir=args.attn_dir,save=True)
-    attn_arr_prompt_small, attn_arr_prompt_large = stored_prompt_attns
-
-    graph_features_small = GraphFeatures(attn_arr_prompt_small, prompt_attn=True, remove_attention_sink=True)
-    graph_features_large = GraphFeatures(attn_arr_prompt_large, prompt_attn=True, remove_attention_sink=True)
-    # graph_features_intermediate_small = GraphFeatures(attn_arr_intermediate_small, prompt_attn=False)
-    # graph_features_intermediate_large = GraphFeatures(attn_arr_intermediate_large, prompt_attn=False)
-
-    small_matrix_filename = os.path.join(args.output_dir, f"{base_filename}_small_no_sink_layerwise")
-    large_matrix_filename = os.path.join(args.output_dir, f"{base_filename}_large_no_sink_layerwise")
-
-    graph_features_small.plot_layerwise_attention_matrices(small_matrix_filename)
-    graph_features_large.plot_layerwise_attention_matrices(large_matrix_filename)
+    base_filename = f"prompt_{prompt_id}"
+    
+    # Load attention data
+    stored_prompt_attns = load_attns(args, model_sizes=args.model_sizes, attn_dir=args.attn_dir, save=True)
+    
+    # Create graph features for each model size
+    graph_features = {}
+    for i, model_size in enumerate(args.model_sizes):
+        graph_features[model_size] = GraphFeatures(stored_prompt_attns[i], prompt_attn=True, remove_attention_sink=True)
+        
+        # Plot attention matrices
+        matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_size}_no_sink_layerwise")
+        graph_features[model_size].plot_layerwise_attention_matrices(matrix_filename)
 
     features = [
         'clustering', 
@@ -216,28 +214,36 @@ def main():
         'average_degree'
     ]
 
-    fig = plt.figure(figsize=(12, 8))
     for feature in features:
         print(f"Running {feature}...")
-        feature_small = graph_features_small.extract(feature, interpolate=True, max_layers=32)
-        feature_large = graph_features_large.extract(feature, interpolate=True, max_layers=32)
         
         fig, ax = plt.subplots(figsize=(12, 8))
-        ax.plot(feature_small, label=f"small", linestyle='--')
-        ax.plot(feature_large, label=f"large", linestyle='-')
+        
+        for model_size in args.model_sizes:
+            feature_values = graph_features[model_size].extract(feature, interpolate=True, max_layers=32)
+            ax.plot(feature_values, label=model_size, linestyle='--' if model_size == 'small' else '-')
+            
         ax.set_xlabel("Layers")
         ax.set_ylabel(feature)
-        ax.set_title(f"{feature} for large and small models on prompt {args.prompt_id}")
+        ax.set_title(f"{feature} across model sizes on prompt {prompt_id}")
         ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
         ax.grid(True)
         
         plt.tight_layout()
         savefig_path = os.path.join(args.output_dir, f"{base_filename}_{feature}_no_sink_layerwise")
         plt.savefig(savefig_path + ".png", bbox_inches='tight')
-        plt.show()
         plt.close(fig)
 
-    print("Done")
+
+def main():
+    args = get_args()
+    os.makedirs(args.output_dir, exist_ok=True)
+    os.makedirs(args.attn_dir, exist_ok=True)
+
+    for prompt_id in args.prompt_ids:
+        analyze_prompt(args, prompt_id)
+
+    print("\nDone")
 
 
 if __name__ == "__main__":

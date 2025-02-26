@@ -61,9 +61,9 @@ def aggregate_attention_layers(attn_matrices):
     return A_agg
 
 
-def get_cached_attention(args, attn_dir, model_size):
+def get_cached_attention(args, attn_dir, model_size, prompt_id):
     cached_attention_files = [el for el in os.listdir(attn_dir)
-                        if "prompt_attention_values" in el and el.endswith(".npy")]
+                        if "prompt_attention_values" in el and el.endswith(".npy") and f"_{prompt_id}" in el]
     
     cached_attentions = filter_prompts(cached_attention_files, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots, model_size)
     
@@ -75,7 +75,7 @@ def load_attns(args, model_sizes=["small", "large"], save=False, **kwargs):
     attn_dicts = []
     for model_size in model_sizes:
         attn_path = kwargs.get("attn_dir", args.attn_dir)
-        cached_attentions = get_cached_attention(args, attn_path, model_size)
+        cached_attentions = get_cached_attention(args, attn_path, model_size, args.prompt_id)
         if len(cached_attentions) == 0:
             args.model_size = model_size
             outputs, *_ = run_model(args)
