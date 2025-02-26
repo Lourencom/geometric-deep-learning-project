@@ -1,12 +1,17 @@
 import torch
 import os
-
-from utils import get_git_root, get_model_and_tokenizer
+from utils import get_git_root
 from prompts import Prompts
+from constants import Constants
+
+import transformers
+from transformers import AutoTokenizer
 
 
 def run_model(args):
-    model, tokenizer = get_model_and_tokenizer(args.model_size)
+    # Unpack the current model tuple
+    family, size, variant = args.current_model
+    model, tokenizer = get_model_and_tokenizer(family, size, variant)
 
     prompts = Prompts(args.prompt_path)       
     prompt = prompts.get_prompt(
@@ -59,3 +64,85 @@ def store_answer(args, answer, prompt_text, prompt_difficulty, prompt_category, 
         f.write("Generated Answer:\n")
         f.write(answer)
     return answer_file
+
+
+def get_model_and_tokenizer(family, size, variant):
+    """
+    family: str, one of ["llama", "bloom"]
+    size: str, one of ["small", "large", "huge"] for llama,
+          or one of ["560m", "1b1", "1b7", "3b", "7b1"] for bloom
+    variant: str, either "causal" or "instruct"
+    """
+    if family.lower() == "llama":
+        # existing Llama code, e.g.
+        if size == "small":
+            if variant == "causal":
+                model_id = Constants.LLAMA_SMALL_CAUSAL
+            elif variant == "instruct":
+                model_id = Constants.LLAMA_SMALL_INSTRUCT
+            else:
+                raise ValueError("Invalid variant for llama")
+        elif size == "large":
+            if variant == "causal":
+                model_id = Constants.LLAMA_LARGE_CAUSAL
+            elif variant == "instruct":
+                model_id = Constants.LLAMA_LARGE_INSTRUCT
+            else:
+                raise ValueError("Invalid variant for llama")
+        elif size == "huge":
+            if variant == "instruct":
+                model_id = Constants.LLAMA_HUGE_INSTRUCT
+            else:
+                raise ValueError("No causal huge variant for llama")
+        else:
+            raise ValueError("Invalid llama size")
+    
+    elif family.lower() == "bloom":
+        # For BLOOM, use the corresponding string IDs
+        if size == "560m":
+            if variant == "causal":
+                model_id = Constants.BLOOM_560M_CAUSAL
+            elif variant == "instruct":
+                model_id = Constants.BLOOM_560M_INSTRUCT
+            else:
+                raise ValueError("Invalid variant for bloom")
+        elif size == "1b1":
+            if variant == "causal":
+                model_id = Constants.BLOOM_1B1_CAUSAL
+            elif variant == "instruct":
+                model_id = Constants.BLOOM_1B1_INSTRUCT
+            else:
+                raise ValueError("Invalid variant for bloom")
+        elif size == "1b7":
+            if variant == "causal":
+                model_id = Constants.BLOOM_1B7_CAUSAL
+            elif variant == "instruct":
+                model_id = Constants.BLOOM_1B7_INSTRUCT
+            else:
+                raise ValueError("Invalid variant for bloom")
+        elif size == "3b":
+            if variant == "causal":
+                model_id = Constants.BLOOM_3B_CAUSAL
+            elif variant == "instruct":
+                model_id = Constants.BLOOM_3B_INSTRUCT
+            else:
+                raise ValueError("Invalid variant for bloom")
+        elif size == "7b1":
+            if variant == "causal":
+                model_id = Constants.BLOOM_7B1_CAUSAL
+            elif variant == "instruct":
+                model_id = Constants.BLOOM_7B1_INSTRUCT
+            else:
+                raise ValueError("Invalid variant for bloom")
+        else:
+            raise ValueError("Invalid bloom size")
+    else:
+        raise ValueError("Unsupported model family")
+    
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        model_id,
+        torch_dtype=torch.bfloat16,
+        device_map="auto"
+    )
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    return model, tokenizer

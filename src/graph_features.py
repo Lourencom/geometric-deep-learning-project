@@ -195,16 +195,21 @@ def analyze_prompt(args, prompt_id):
     base_filename = f"prompt_{prompt_id}"
     
     # Load attention data
-    stored_prompt_attns = load_attns(args, model_sizes=args.model_sizes, attn_dir=args.attn_dir, save=True)
+    stored_prompt_attns = load_attns(args, models=args.models, attn_dir=args.attn_dir, save=True)
     
-    # Create graph features for each model size
+    # Create graph features for each model
     graph_features = {}
-    for i, model_size in enumerate(args.model_sizes):
-        graph_features[model_size] = GraphFeatures(stored_prompt_attns[i], prompt_attn=True, remove_attention_sink=True)
+    for i, model_tuple in enumerate(args.models):
+        family, size, variant = model_tuple
+        model_identifier = f"{family}_{size}_{variant}"
+        
+        graph_features[model_identifier] = GraphFeatures(stored_prompt_attns[i], 
+                                                       prompt_attn=True, 
+                                                       remove_attention_sink=True)
         
         # Plot attention matrices
-        matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_size}_no_sink_layerwise")
-        graph_features[model_size].plot_layerwise_attention_matrices(matrix_filename)
+        matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_identifier}_no_sink_layerwise")
+        graph_features[model_identifier].plot_layerwise_attention_matrices(matrix_filename)
 
     features = [
         'clustering', 
@@ -214,31 +219,52 @@ def analyze_prompt(args, prompt_id):
         'average_degree'
     ]
 
-    for feature in features:
+    # Create a single figure with subplots for all features
+    n_features = len(features)
+    n_cols = 2
+    n_rows = (n_features + 1) // 2  # Ceiling division
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5*n_rows))
+    axes = axes.flatten()  # Flatten to make indexing easier
+    
+    # Plot each feature in its own subplot
+    for idx, feature in enumerate(features):
         print(f"Running {feature}...")
+        ax = axes[idx]
         
-        fig, ax = plt.subplots(figsize=(12, 8))
-        
-        for model_size in args.model_sizes:
-            feature_values = graph_features[model_size].extract(feature, interpolate=True, max_layers=32)
-            ax.plot(feature_values, label=model_size, linestyle='--' if model_size == 'small' else '-')
+        for model_tuple in args.models:
+            family, size, variant = model_tuple
+            model_identifier = f"{family}_{size}_{variant}"
+            
+            feature_values = graph_features[model_identifier].extract(feature, interpolate=True, max_layers=32)
+            ax.plot(feature_values, label=model_identifier)
             
         ax.set_xlabel("Layers")
         ax.set_ylabel(feature)
-        ax.set_title(f"{feature} across model sizes on prompt {prompt_id}")
-        ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left')
+        ax.set_title(feature)
         ax.grid(True)
-        
-        plt.tight_layout()
-        savefig_path = os.path.join(args.output_dir, f"{base_filename}_{feature}_no_sink_layerwise")
-        plt.savefig(savefig_path + ".png", bbox_inches='tight')
-        plt.close(fig)
+    
+    # Remove any unused subplots
+    for idx in range(len(features), len(axes)):
+        fig.delaxes(axes[idx])
+    
+    # Add a single legend for the entire figure
+    handles, labels = axes[0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='center right', bbox_to_anchor=(0.98, 0.5))
+    
+    # Adjust layout and save
+    fig.suptitle(f"Graph Features Analysis for Prompt {prompt_id}", y=1.02)
+    plt.tight_layout()
+    append_str = "_".join([f"{family}_{size}_{variant}" for family, size, variant in args.models])
+    savefig_path = os.path.join(args.output_dir, f"{base_filename}_all_features_no_sink_layerwise_{append_str}")
+    plt.savefig(savefig_path + ".png", bbox_inches='tight')
+    plt.close(fig)
 
 
 def main():
     args = get_args()
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs(args.attn_dir, exist_ok=True)
+    breakpoint()
 
     for prompt_id in args.prompt_ids:
         analyze_prompt(args, prompt_id)
