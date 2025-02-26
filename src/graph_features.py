@@ -33,6 +33,9 @@ def create_graph_single_attn(attn, **kwargs):
         for j in top_indices:
             if i != j: # FIXME: we are removing self-attention, why pavle?
                 G.add_edge(i, j, weight=attn[i, j])
+    
+    if kwargs.get("remove_attention_sink", False): # remove first column
+        G.remove_node(0)
     return G
 
 
@@ -206,14 +209,14 @@ if __name__ == "__main__":
               'average_degree'
               ]
     
-    graph_features_small = GraphFeatures(attn_arr_prompt_small, prompt_attn=True)
-    graph_features_large = GraphFeatures(attn_arr_prompt_large, prompt_attn=True)
+    graph_features_small = GraphFeatures(attn_arr_prompt_small, prompt_attn=True, remove_attention_sink=True)
+    graph_features_large = GraphFeatures(attn_arr_prompt_large, prompt_attn=True, remove_attention_sink=True)
 
     # graph_features_intermediate_small = GraphFeatures(attn_arr_intermediate_small, prompt_attn=False)
     # graph_features_intermediate_large = GraphFeatures(attn_arr_intermediate_large, prompt_attn=False)
 
-    graph_features_small.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_small_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
-    graph_features_large.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_large_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
+    graph_features_small.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_small_no_sink_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
+    graph_features_large.plot_layerwise_attention_matrices(relative_to_absolute_path(args.output_dir) + f"/prompt_attention_matrices_large_no_sink_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}")
    
     fig = plt.figure(figsize=(12, 8))
 
@@ -234,7 +237,7 @@ if __name__ == "__main__":
         ax.grid(True)
         
         plt.tight_layout()
-        savefig_path = relative_to_absolute_path(args.output_dir) + f"/prompt_{feature}_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}"
+        savefig_path = relative_to_absolute_path(args.output_dir) + f"/prompt_{feature}_no_sink_{args.prompt_difficulty}_{args.prompt_category}_{args.prompt_n_shots}"
         plt.savefig(savefig_path + ".png", bbox_inches='tight')
         plt.show()
         plt.close(fig)
