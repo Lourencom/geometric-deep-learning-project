@@ -9,5 +9,5 @@ def plot_attention_matrix(attention_matrix, savepath=None):
     plt.ylabel("Query Tokens")
     plt.show()
     if savepath:
-        plt.savefig(savepath)
+        plt.savefig(savepath + ".png")
     plt.close()

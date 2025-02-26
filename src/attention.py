@@ -3,7 +3,8 @@ import os
 import torch
 import numpy as np
 from utils import relative_to_absolute_path
-
+from model import run_model
+from utils import filter_prompts
 
 def extract_attention(args, outputs, save=False):
     """
@@ -62,3 +63,28 @@ def aggregate_attention_layers(attn_matrices):
     for attn in attn_matrices[1:]:
         A_agg = np.dot(attn, A_agg)
     return A_agg
+
+
+def get_cached_attention(args, model_size):
+    cached_attention_files = [el for el in os.listdir(relative_to_absolute_path(args.attn_dir))
+                        if "attention_values" in el and el.endswith(".npy")]
+    
+    cached_attentions = filter_prompts(cached_attention_files, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots, model_size)
+    
+    return cached_attentions
+
+
+def load_attns(args, model_sizes=["small", "large"]):
+    attn_dicts = []
+    for model_size in model_sizes:
+        cached_attentions = get_cached_attention(args, model_size)
+        attn_path = relative_to_absolute_path(args.attn_dir)
+        if len(cached_attentions) == 0:
+            args.model_size = model_size
+            outputs, *_ = run_model(args)
+            attn_dict = extract_attention(args, outputs, save=False)
+        else:
+            loaded = np.load(os.path.join(attn_path, cached_attentions[0]))
+            attn_dict = loaded.item() if isinstance(loaded, np.ndarray) else loaded
+        attn_dicts.append(attn_dict)
+    return attn_dicts

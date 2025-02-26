@@ -1,15 +1,11 @@
 import os
 import numpy as np
-import pandas as pd
 import networkx as nx
 import matplotlib.pyplot as plt
-import argparse
 from GraphRicciCurvature.FormanRicci import FormanRicci
 from GraphRicciCurvature.OllivierRicci import OllivierRicci
 
-from utils import filter_prompts
-from attention import extract_attention, aggregate_attention_layers
-from model import run_model
+from attention import aggregate_attention_layers, load_attns
 from visualization import plot_attention_matrix
 from utils import relative_to_absolute_path
 from args import get_args
