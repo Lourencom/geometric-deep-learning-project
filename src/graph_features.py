@@ -136,10 +136,10 @@ class GraphFeatures:
         return np.array(avg_degrees)
 
     def extract_average_clustering(self, **kwargs):
-        return np.array([nx.average_clustering(G) for G in self.attn_graphs])
+        return np.array([nx.average_clustering(G, weight="weight") for G in self.attn_graphs])
     
     def extract_average_shortest_path_length(self, **kwargs):
-        return np.array([nx.average_shortest_path_length(G) for G in self.attn_graphs])
+        return np.array([nx.average_shortest_path_length(G, weight="weight") for G in self.attn_graphs])
     
     def extract_ollivier_ricci(self, **kwargs):
         orc = [OllivierRicci(G) for G in self.attn_graphs]
