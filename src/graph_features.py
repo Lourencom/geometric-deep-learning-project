@@ -15,16 +15,46 @@ from utils import relative_to_absolute_path
 from args import get_args
 
 
+def create_graph_single_attn(attn, **kwargs):
+    """
+    I am given a single attention matrix (NxN) and I want to create a graph from it.
+    Edges are chosen based on the top k values in the attention matrix.
+    """
+    top_k = kwargs.get("top_k", attn.shape[0])
+
+    # Create a graph from the attention matrices
+    G = nx.Graph()
+
+    #th_quantile = np.quantile(attn, threshold)
+    # Add nodes to the graph
+    for i in range(attn.shape[0]):
+        G.add_node(i)
+    
+    # Add edges to the graph
+    for i in range(attn.shape[0]):
+        top_indices = np.argsort(attn[i, :])[:top_k]
+        for j in top_indices:
+            if i != j: # FIXME: we are removing self-attention, why pavle?
+                G.add_edge(i, j)
+    return G
+
 
 class GraphFeatures:
-    def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int=32, **kwargs):
+    def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int=32, analysis_type = "layerwise", **kwargs):
         """
         attn_timestep_arr: np.ndarray
             The attention array of shape (timesteps, layers, batch_size, n_heads, n_tokens, n_tokens)
         """
+
+        if analysis_type != "layerwise":
+            raise NotImplementedError("Only layerwise analysis is supported for now")
+        if not kwargs.get("prompt_attn", False):
+            raise NotImplementedError("Only prompt analysis is supported for now")
+
         self.max_layers = max_layers
         self.threshold = kwargs.get("threshold", 0.0)
         self.prompt_attn = kwargs.get("prompt_attn", False)
+        self.top_k = kwargs.get("top_k", None) # choose top k edges
         self.attn_timestep_arr = attn_timestep_arr
         #self.n_tokens = self.attn_arr.shape[1]
 
@@ -47,32 +77,9 @@ class GraphFeatures:
         for attn in attn_arr:
             attn_avg = np.mean(attn, axis=1) # avg over heads
             aggregated_attn = aggregate_attention_layers(attn_avg) # aggregate over layers
-            graphs.append(self.__create_graph_single_attn(aggregated_attn, **kwargs))    
+            graphs.append(create_graph_single_attn(aggregated_attn, **kwargs))    
             
         return graphs
-    
-    def __create_graph_single_attn(self, attn, **kwargs):
-        """
-        I am given a single attention matrix (NxN) and I want to create a graph from it.
-        Edges are present if the attention weight between the ith and jth tokens is greater than the threshold.
-        """
-        threshold = kwargs.get("threshold", self.threshold)
-
-        # Create a graph from the attention matrices
-        G = nx.Graph()
-
-        #th_quantile = np.quantile(attn, threshold)
-        # Add nodes to the graph
-        for i in range(attn.shape[0]):
-            G.add_node(i)
-        
-        # Add edges to the graph
-        for i in range(attn.shape[0]):
-            for j in range(attn.shape[1]):
-                if i != j and attn[i, j] > threshold:
-                    G.add_edge(i, j)
-        
-        return G
 
     def plot_attention_matrices(self, save_path):
         for attn_graph in self.attn_graphs:
@@ -164,8 +171,10 @@ if __name__ == "__main__":
 
     attn_dicts = load_attns(args)
 
-    attn_arr_prompt_small = [attn_dicts[0]["prompt_attns"]]
-    attn_arr_prompt_large = [attn_dicts[1]["prompt_attns"]]
+    breakpoint()
+
+    attn_arr_prompt_small = attn_dicts[0]["prompt_attns"]
+    attn_arr_prompt_large = attn_dicts[1]["prompt_attns"]
 
     attn_arr_intermediate_small = attn_dicts[0]["intermediate_attns"]
     attn_arr_intermediate_large = attn_dicts[1]["intermediate_attns"]
