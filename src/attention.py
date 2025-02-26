@@ -37,3 +37,28 @@ def extract_attention(args, outputs, save=False):
         np.save(prompt_attns_filename, attention_arrays, allow_pickle=True) 
         np.save(intermediate_attns_filename, intermediate_attention_arrays, allow_pickle=True)
     return {"prompt_attns": attention_arrays, "intermediate_attns": intermediate_attention_arrays}
+
+
+def aggregate_attention_layers(attn_matrices):
+    """
+    Aggregates a list of attention matrices using matrix multiplication.
+    
+    Parameters:
+        attn_matrices (list of np.ndarray): 
+            List of attention matrices where each matrix is of shape (n_tokens, n_tokens).
+            The list should be ordered from the first layer to the last layer.
+            
+    Returns:
+        np.ndarray: Aggregated attention matrix of shape (n_tokens, n_tokens) that 
+                    represents the overall information flow across layers.
+                    
+    Example:
+        For two layers, the aggregated attention is computed as:
+            A_agg = A_layer2 @ A_layer1
+    """
+    # Start with the first layer's attention matrix.
+    A_agg = attn_matrices[0]
+    # Multiply successively by the next layer's attention matrix.
+    for attn in attn_matrices[1:]:
+        A_agg = np.dot(attn, A_agg)
+    return A_agg
