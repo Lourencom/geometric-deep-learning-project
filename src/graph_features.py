@@ -42,7 +42,7 @@ def create_graph_single_attn(attn, **kwargs):
 
 
 class GraphFeatures:
-    def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int=32, analysis_type = "layerwise", **kwargs):
+    def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int, analysis_type = "layerwise", **kwargs):
         """
         attn_timestep_arr: np.ndarray -> for now its simply the prompt attentions
         Shape 4D: (layers, heads, n_query, n_key)
@@ -53,11 +53,11 @@ class GraphFeatures:
         if not kwargs.get("prompt_attn", False):
             raise NotImplementedError("Only prompt analysis is supported for now")
 
-        self.max_layers = max_layers
         self.prompt_attn = kwargs.get("prompt_attn", False)
         self.top_k = kwargs.get("top_k", None) # choose top k edges
         self.attn_timestep_arr = attn_timestep_arr
         self.analysis_type = analysis_type
+        self.max_layers = max_layers
         #self.n_tokens = self.attn_arr.shape[1]
 
         self.feature_fn_map = {
@@ -66,6 +66,19 @@ class GraphFeatures:
             "forman_ricci": self.extract_forman_ricci,
             "ollivier_ricci": self.extract_ollivier_ricci,
             "average_degree": self.extract_average_node_degree,
+            "connectivity": self.extract_connectivity,
+            "sparseness": self.extract_sparseness,
+            "hubs": self.extract_hubs,
+            "clusters": self.extract_clusters,
+            "communities": self.extract_communities,
+            "fourier": self.extract_fourier,
+            #"cheeger_constant": self.extract_cheeger_constant,
+            "commute_time_efficiency": self.extract_commute_time_efficiency,
+
+            # New features
+            "pagerank": self.extract_pagerank_centrality,
+            "eigenvector_centrality": self.extract_eigenvector_centrality,
+            "cycle_count": self.extract_cycle_count,
         }
 
         self.attn_graphs = self.create_graphs(attn_timestep_arr, **kwargs) # 1 graph per timestep
@@ -130,7 +143,7 @@ class GraphFeatures:
     def extract_average_node_degree(self, **kwargs):
         avg_degrees = []
         for G in self.attn_graphs:
-            node_degrees = G.degree()
+            node_degrees = [val for _, val in G.out_degree()]
             avg_degree = np.mean(node_degrees)
             avg_degrees.append(avg_degree)
         return np.array(avg_degrees)
@@ -166,6 +179,129 @@ class GraphFeatures:
         ]
         return np.array(medians)
     
+    def extract_connectivity(self, **kwargs):
+        """Return the number of strongly connected components for each directed graph."""
+        connectivity = []
+        for G in self.attn_graphs:
+            comp = nx.number_strongly_connected_components(G)
+            connectivity.append(comp)
+        return np.array(connectivity)
+    
+    def extract_sparseness(self, **kwargs):
+        """Compute sparseness as the inverse of density for each graph."""
+        densities = []
+        for G in self.attn_graphs:
+            d = nx.density(G)
+            densities.append(d)
+        return np.array(densities)
+    
+    def extract_hubs(self, **kwargs):
+        """Count the number of nodes with degree above the 90th percentile (as hubs)."""
+        hubs_count = []
+        for G in self.attn_graphs:
+            degrees = np.array([deg for _, deg in G.degree()])
+            if len(degrees) == 0:
+                hubs_count.append(0)
+                continue
+            threshold = np.percentile(degrees, 90)
+            count = np.sum(degrees >= threshold)
+            hubs_count.append(count)
+        return np.array(hubs_count)
+
+    def extract_clusters(self, **kwargs):
+        """Return the median clustering coefficient for each graph (using the undirected version)."""
+        cluster_medians = []
+        for G in self.attn_graphs:
+            clustering_dict = nx.clustering(G.to_undirected(), weight="weight")
+            med = np.median(list(clustering_dict.values())) if clustering_dict else 0
+            cluster_medians.append(med)
+        return np.array(cluster_medians)
+    
+    def extract_communities(self, **kwargs):
+        """Detect communities using a greedy modularity algorithm and return the count per graph."""
+        communities_count = []
+        for G in self.attn_graphs:
+            G_undir = G.to_undirected()
+            communities = nx.algorithms.community.greedy_modularity_communities(G_undir, weight="weight")
+            communities_count.append(len(communities))
+        return np.array(communities_count)
+    
+    def extract_fourier(self, **kwargs):
+        """
+        Compute a summary statistic based on the graph Fourier transform.
+        Here, we use the spectral energy: sum of absolute Laplacian eigenvalues divided by the number of nodes.
+        """
+        spectral_energy = []
+        for G in self.attn_graphs:
+            G_undir = G.to_undirected()
+            n_nodes = G_undir.number_of_nodes()
+            if n_nodes == 0:
+                spectral_energy.append(0)
+                continue
+            L = nx.laplacian_matrix(G_undir).todense()
+            eigvals = np.linalg.eigvals(L)
+            energy = np.sum(np.abs(eigvals)) / n_nodes
+            spectral_energy.append(energy)
+        return np.array(spectral_energy)
+
+    def extract_commute_time_efficiency(self, **kwargs):
+        """
+        Compute a surrogate metric for the efficiency of information propagation using the global efficiency.
+        Note: global efficiency is defined for undirected graphs.
+        """
+        efficiency_vals = []
+        for G in self.attn_graphs:
+            G_undir = G.to_undirected()
+            try:
+                eff = nx.global_efficiency(G_undir)
+            except Exception as e:
+                eff = np.nan
+            efficiency_vals.append(eff)
+        return np.array(efficiency_vals)
+    
+    # New Feature: PageRank Centrality
+    def extract_pagerank_centrality(self, aggregation = "max", **kwargs):
+        pagerank= []
+        for G in self.attn_graphs:
+            # For directed graphs, nx.pagerank computes the PageRank.
+            pr = nx.pagerank(G, weight='weight')
+            pr_values = np.array(list(pr.values()))
+            if aggregation == "mean":
+                pagerank.append(np.mean(pr_values))
+            elif aggregation == "max":
+                pagerank.append(np.max(pr_values))
+            else:
+                raise ValueError(f"Invalid aggregation method: {aggregation}")
+        return np.array(pagerank)
+    
+    # New Feature: Eigenvector Centrality
+    def extract_eigenvector_centrality(self, aggregation = "max", **kwargs):
+        eigencentrality = []
+        for G in self.attn_graphs:
+            try:
+                ec = nx.eigenvector_centrality_numpy(G, weight='weight')
+            except Exception:
+                ec = {node: 0 for node in G.nodes()}
+            ec_values = np.array(list(ec.values()))
+            if aggregation == "mean":
+                eigencentrality.append(np.mean(ec_values))
+            elif aggregation == "max":
+                eigencentrality.append(np.max(ec_values))
+            else:
+                raise ValueError(f"Invalid aggregation method: {aggregation}")
+        return np.array(eigencentrality)
+    
+    # New Feature: Cycle Count (using cycle basis in undirected graph as a proxy for loops)
+    def extract_cycle_count(self, **kwargs):
+        cycle_counts = []
+        for G in self.attn_graphs:
+            G_undir = G.to_undirected()
+            # nx.cycle_basis returns a list of cycles (as lists of nodes)
+            cycles = nx.cycle_basis(G_undir)
+            cycle_counts.append(len(cycles))
+        return np.array(cycle_counts)
+    
+
     def __interpolate_to_max_layers(self, feature_arr):
         curr_n_layers = len(feature_arr)
         new_n_layers = self.max_layers
@@ -203,20 +339,36 @@ def analyze_prompt(args, prompt_id):
         family, size, variant = model_tuple
         model_identifier = f"{family}_{size}_{variant}"
         
-        graph_features[model_identifier] = GraphFeatures(stored_prompt_attns[i], 
-                                                       prompt_attn=True, 
-                                                       remove_attention_sink=True)
-        
-        # Plot attention matrices
-        matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_identifier}_no_sink_layerwise")
-        graph_features[model_identifier].plot_layerwise_attention_matrices(matrix_filename)
+        graph_features[model_identifier] = GraphFeatures(
+            stored_prompt_attns[i], 
+            prompt_attn=True, 
+            remove_attention_sink=True,
+            max_layers=32
+        )
+
+        if args.plot_matrices:
+            # Plot attention matrices
+            matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_identifier}_no_sink_layerwise")
+            graph_features[model_identifier].plot_layerwise_attention_matrices(matrix_filename)
 
     features = [
         'clustering', 
         'average_shortest_path_length', 
         'forman_ricci',
         #'ollivier_ricci',
-        'average_degree'
+        'average_degree',
+        'connectivity',
+        'sparseness',
+        'hubs',
+        'clusters',
+        'communities',
+        'fourier',
+        # 'cheeger_constant',
+        'commute_time_efficiency',
+        # new
+        'pagerank',
+        'eigenvector_centrality',
+        'cycle_count',
     ]
 
     # Create a single figure with subplots for all features
@@ -227,16 +379,48 @@ def analyze_prompt(args, prompt_id):
     axes = axes.flatten()  # Flatten to make indexing easier
     
     # Plot each feature in its own subplot
+    linestyles = ['-', '--', ':', '-.'] # Different line styles
+    markers = ['o', 's', '^', 'D', 'v', '>', '<', 'p'] # Different markers
+    
     for idx, feature in enumerate(features):
         print(f"Running {feature}...")
         ax = axes[idx]
         
-        for model_tuple in args.models:
+        for i, model_tuple in enumerate(args.models):
             family, size, variant = model_tuple
             model_identifier = f"{family}_{size}_{variant}"
             
-            feature_values = graph_features[model_identifier].extract(feature, interpolate=True, max_layers=32)
-            ax.plot(feature_values, label=model_identifier)
+            # Cycle through linestyles and markers
+            linestyle = linestyles[i % len(linestyles)]
+            marker = markers[i % len(markers)]
+
+            # Handle features that return multiple values
+            if feature in ['pagerank', 'eigenvector_centrality']:
+                # mean_values = graph_features[model_identifier].extract(feature, interpolate=True, aggregation="mean")
+                max_values = graph_features[model_identifier].extract(feature, interpolate=True, aggregation="max")
+                """
+                ax.plot(mean_values, 
+                       label=f"{model_identifier} (mean)",
+                       linestyle=linestyle,
+                       marker=marker,
+                       markevery=5,
+                       markersize=4)
+                """
+                ax.plot(max_values, 
+                       label=f"{model_identifier} (max)",
+                       linestyle=linestyle,
+                       marker=marker,
+                       markevery=5,
+                       markersize=4,
+                       alpha=0.5)  # Make max values slightly transparent
+            else:
+                feature_values = graph_features[model_identifier].extract(feature, interpolate=True)
+                ax.plot(feature_values, 
+                       label=model_identifier,
+                       linestyle=linestyle,
+                       marker=marker,
+                       markevery=5,
+                       markersize=4)
             
         ax.set_xlabel("Layers")
         ax.set_ylabel(feature)
