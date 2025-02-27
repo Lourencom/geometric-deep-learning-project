@@ -264,7 +264,6 @@ def main():
     args = get_args()
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs(args.attn_dir, exist_ok=True)
-    breakpoint()
 
     for prompt_id in args.prompt_ids:
         analyze_prompt(args, prompt_id)
