@@ -239,6 +239,43 @@ def get_model_and_tokenizer(family, size, variant):
     tokenizer = AutoTokenizer.from_pretrained(model_id)
     return model, tokenizer
 
+
+def sample_next_token(current_ids, next_token_logits, temperature=1.0, top_p=0.9, top_k=50, repetition_penalty=1.0):
+    
+    # Apply temperature
+    if temperature > 0:
+        next_token_logits = next_token_logits / temperature
+    
+    # Apply repetition penalty
+    if repetition_penalty != 1.0:
+        for token_id in current_ids[0]:
+            next_token_logits[0, token_id] /= repetition_penalty
+    
+    # Apply top-k filtering
+    if top_k > 0:
+        indices_to_remove = next_token_logits < torch.topk(next_token_logits, top_k)[0][..., -1, None]
+        next_token_logits[indices_to_remove] = -float('Inf')
+    
+    # Apply top-p (nucleus) filtering
+    if top_p < 1.0:
+        sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
+        cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
+        
+        # Remove tokens with cumulative probability above the threshold
+        sorted_indices_to_remove = cumulative_probs > top_p
+        # Shift the indices to the right to keep also the first token above the threshold
+        sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
+        sorted_indices_to_remove[..., 0] = 0
+        
+        indices_to_remove = sorted_indices[sorted_indices_to_remove]
+        next_token_logits[0, indices_to_remove] = -float('Inf')
+    
+    # Sample from the filtered distribution
+    probs = torch.softmax(next_token_logits, dim=-1)
+    next_token_id = torch.multinomial(probs, num_samples=1)
+    return next_token_id
+
+
 def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=512):
     """
     Captures the full attention matrices for each generated token across all layers.
@@ -285,7 +322,7 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
             
             # Get the next token prediction
             next_token_logits = outputs.logits[:, -1, :]
-            next_token_id = torch.argmax(next_token_logits, dim=-1).unsqueeze(-1)
+            next_token_id = sample_next_token(current_ids, next_token_logits)
             
             # Store the attention matrices for this step
             # This captures attention for all layers and all heads
@@ -318,187 +355,8 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
         'token_texts': token_texts
     }
 
-def get_token_by_token_attention_with_sampling(model, tokenizer, prompt_text, max_new_tokens=512, 
-                                              temperature=0.7, top_p=0.9, top_k=50, 
-                                              repetition_penalty=1.0):
-    """
-    Captures the full attention matrices for each generated token across all layers,
-    with support for sampling and other generation parameters.
-    
-    This function performs token-by-token generation with sampling and captures 
-    the attention matrices at each step, preserving the full attention state 
-    (all heads, all layers) for each token generation step.
-    
-    Args:
-        model: The HuggingFace model to use for generation
-        tokenizer: The tokenizer corresponding to the model
-        prompt_text: The input prompt text
-        max_new_tokens: Maximum number of tokens to generate
-        temperature: The temperature for sampling (higher = more random)
-        top_p: The cumulative probability for nucleus sampling
-        top_k: The number of highest probability tokens to keep for top-k sampling
-        repetition_penalty: Penalty for repeating tokens (1.0 = no penalty)
-        
-    Returns:
-        A dictionary containing:
-        - 'prompt_tokens': The tokenized prompt
-        - 'generated_tokens': The generated tokens
-        - 'full_text': The complete text (prompt + generation)
-        - 'attention_matrices': A list of attention matrices for each generation step
-        - 'token_ids': The token IDs for each step of generation
-        - 'token_texts': The decoded text for each generated token
-        - 'token_probs': The probability of each selected token
-    """
-    # Tokenize the prompt
-    inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
-    input_ids = inputs.input_ids
-    input_length = input_ids.shape[1]
-    
-    # Store the results
-    attention_matrices = []
-    generated_token_ids = []
-    token_texts = []
-    token_probs = []
-    
-    # Start with the prompt tokens
-    current_ids = input_ids.clone()
-    past_key_values = None
-    
-    # Generate tokens one by one
-    with torch.no_grad():
-        for _ in range(max_new_tokens):
-            # Forward pass with attention outputs and past key values for efficiency
-            outputs = model(
-                input_ids=current_ids if past_key_values is None else current_ids[:, -1:],
-                past_key_values=past_key_values,
-                output_attentions=True,
-                use_cache=True,
-                return_dict=True
-            )
-            
-            # Update past key values for faster generation
-            past_key_values = outputs.past_key_values
-            
-            # Get the next token logits
-            next_token_logits = outputs.logits[:, -1, :]
-            
-            # Apply temperature
-            if temperature > 0:
-                next_token_logits = next_token_logits / temperature
-            
-            # Apply repetition penalty
-            if repetition_penalty != 1.0:
-                for token_id in current_ids[0]:
-                    next_token_logits[0, token_id] /= repetition_penalty
-            
-            # Apply top-k filtering
-            if top_k > 0:
-                indices_to_remove = next_token_logits < torch.topk(next_token_logits, top_k)[0][..., -1, None]
-                next_token_logits[indices_to_remove] = -float('Inf')
-            
-            # Apply top-p (nucleus) filtering
-            if top_p < 1.0:
-                sorted_logits, sorted_indices = torch.sort(next_token_logits, descending=True)
-                cumulative_probs = torch.cumsum(torch.softmax(sorted_logits, dim=-1), dim=-1)
-                
-                # Remove tokens with cumulative probability above the threshold
-                sorted_indices_to_remove = cumulative_probs > top_p
-                # Shift the indices to the right to keep also the first token above the threshold
-                sorted_indices_to_remove[..., 1:] = sorted_indices_to_remove[..., :-1].clone()
-                sorted_indices_to_remove[..., 0] = 0
-                
-                indices_to_remove = sorted_indices[sorted_indices_to_remove]
-                next_token_logits[0, indices_to_remove] = -float('Inf')
-            
-            # Sample from the filtered distribution
-            probs = torch.softmax(next_token_logits, dim=-1)
-            next_token_id = torch.multinomial(probs, num_samples=1)
-            
-            # Store the probability of the selected token
-            token_prob = probs[0, next_token_id.item()].item()
-            token_probs.append(token_prob)
-            
-            # Store the attention matrices for this step
-            # This captures attention for all layers and all heads
-            step_attentions = outputs.attentions
-            attention_matrices.append(step_attentions)
-            
-            # Store the generated token
-            generated_token_ids.append(next_token_id.item())
-            token_text = tokenizer.decode(next_token_id.item())
-            token_texts.append(token_text)
-            
-            # Check if we've hit the end of sequence token
-            if next_token_id.item() == tokenizer.eos_token_id:
-                break
-                
-            # Append the new token to the sequence
-            current_ids = torch.cat([current_ids, next_token_id], dim=1)
-    
-    # Decode the full generated text
-    full_text = tokenizer.decode(current_ids[0], skip_special_tokens=True)
-    generated_text = tokenizer.decode(current_ids[0][input_length:], skip_special_tokens=True)
-    
-    return {
-        'prompt_tokens': input_ids,
-        'generated_tokens': generated_token_ids,
-        'full_text': full_text,
-        'generated_text': generated_text,
-        'attention_matrices': attention_matrices,
-        'token_texts': token_texts,
-        'token_probs': token_probs
-    }
 
-def visualize_token_attention(attention_data, token_idx, layer_idx, head_idx=None, save_path=None):
-    """
-    Visualizes the attention matrix for a specific token, layer, and optionally head.
-    
-    Args:
-        attention_data: The output from get_token_by_token_attention
-        token_idx: Index of the generated token to visualize
-        layer_idx: Index of the layer to visualize
-        head_idx: Optional index of the attention head to visualize
-                 If None, averages across all heads
-        save_path: Optional path to save the visualization
-        
-    Returns:
-        None (displays the visualization)
-    """
-    import matplotlib.pyplot as plt
-    import seaborn as sns
-    
-    if token_idx >= len(attention_data['attention_matrices']):
-        raise ValueError(f"Token index {token_idx} out of range (max: {len(attention_data['attention_matrices'])-1})")
-    
-    # Get the attention matrix for the specified token and layer
-    attention_matrix = attention_data['attention_matrices'][token_idx][layer_idx]
-    
-    # Shape: [batch_size, num_heads, seq_len, seq_len]
-    if head_idx is not None:
-        # Extract a specific head
-        attn = attention_matrix[0, head_idx].cpu().numpy()
-        title = f"Token: {attention_data['token_texts'][token_idx]}, Layer: {layer_idx}, Head: {head_idx}"
-    else:
-        # Average across heads
-        attn = attention_matrix[0].mean(dim=0).to(torch.float16).cpu().numpy()
-        title = f"Token: {attention_data['token_texts'][token_idx]}, Layer: {layer_idx}, Averaged Heads"
-    
-    # Visualize
-    plt.figure(figsize=(10, 8))
-    sns.heatmap(attn, cmap="viridis")
-    plt.title(title)
-    plt.xlabel("Key position")
-    plt.ylabel("Query position")
-    
-    if save_path:
-        plt.savefig(save_path)
-    
-    plt.show()
-    plt.close()
-
-
-
-def example_token_attention_analysis(model_family="llama", model_size="small", model_variant="instruct", prompt="Explain the concept of attention in transformer models."):
+def get_tokenwise_attns(model_family="llama", model_size="small", model_variant="instruct", prompt="Explain the concept of attention in transformer models."):
     """
     Example function demonstrating how to use get_token_by_token_attention.
     
@@ -512,20 +370,13 @@ def example_token_attention_analysis(model_family="llama", model_size="small", m
         The attention data from get_token_by_token_attention
     """
     # Get the model and tokenizer
-    model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
+    model, tokenizer = get_model_and_tokenizer(model_family.models[0][0], model_size, model_variant)
     
     # Get token-by-token attention
-    attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=50)
+
+    attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=50)        
     
-    # Print some basic information
-    print(f"Generated text: {attention_data['generated_text']}")
-    print(f"Number of tokens generated: {len(attention_data['generated_tokens'])}")
-    
-    # Example: Visualize attention for the first generated token, first layer
-    if len(attention_data['attention_matrices']) > 0:
-        # Visualize the first token's attention at the first layer
-        visualize_token_attention(attention_data, token_idx=0, layer_idx=0, save_path="attention_matrix.png")
-        
+    return attention_data
 
 def save_attention_data(attention_data, output_path):
     """

@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import torch
 import networkx as nx
 import matplotlib.pyplot as plt
 from GraphRicciCurvature.FormanRicci import FormanRicci
@@ -48,8 +49,6 @@ class GraphFeatures:
         Shape 4D: (layers, heads, n_query, n_key)
         """
 
-        if analysis_type != "layerwise":
-            raise NotImplementedError("Only layerwise analysis is supported for now")
         if not kwargs.get("prompt_attn", False):
             raise NotImplementedError("Only prompt analysis is supported for now")
 
@@ -86,7 +85,17 @@ class GraphFeatures:
     def create_graphs(self, attn_arr, **kwargs):
         graphs = []
         if self.prompt_attn:
-            attn_avg = np.mean(attn_arr, axis=1) # avg over heads
+            if self.analysis_type != "tokenwise":
+                attn_avg = np.mean(attn_arr, axis=1) # avg over heads
+            else:
+                attn_avg_over_heads = [
+                    [
+                        attn_arr[i][j].mean(axis=-3).squeeze().cpu().to(torch.float16).numpy()
+                        for j in range(len(attn_arr[i]))
+                    ]
+                    for i in range(len(attn_arr))
+                ]
+                attn_avg = [aggregate_attention_layers(el) for el in attn_avg_over_heads]
 
             if self.analysis_type == "aggregated_layers":
                 attn = aggregate_attention_layers(attn_avg) # aggregate over layers
@@ -95,13 +104,22 @@ class GraphFeatures:
                 for i in range(attn_avg.shape[0]):
                     attn = attn_avg[i]
                     graphs.append(create_graph_single_attn(attn, **kwargs))    
-            else:
-                raise NotImplementedError("Invalid analysis type")
+            elif self.analysis_type == "tokenwise":
+                graphs = self.create_tokenwise_graphs(attn_avg, **kwargs)
             
         else:
             raise NotImplementedError("Intermediate attention not implemented, has diff shapes")
 
         return graphs
+
+    def create_tokenwise_graphs(self, attn_arr, **kwargs):
+        graphs = []
+
+        for i in range(len(attn_arr)):
+            attn = attn_arr[i]
+            graphs.append(create_graph_single_attn(attn, **kwargs))
+        return graphs
+    
 
     def plot_layerwise_attention_matrices(self, save_path):
         if self.analysis_type != "layerwise":
@@ -331,7 +349,7 @@ def analyze_prompt(args, prompt_id):
     base_filename = f"prompt_{prompt_id}"
     
     # Load attention data
-    stored_prompt_attns = load_attns(args, models=args.models, attn_dir=args.attn_dir, save=True)
+    stored_prompt_attns = load_attns(args, models=args.models, attn_dir=args.attn_dir, save=True, tokenwise=args.analysis_type == "tokenwise")
     
     # Create graph features for each model
     graph_features = {}
@@ -339,11 +357,13 @@ def analyze_prompt(args, prompt_id):
         family, size, variant = model_tuple
         model_identifier = f"{family}_{size}_{variant}"
         
+        analysis_type = args.analysis_type
         graph_features[model_identifier] = GraphFeatures(
             stored_prompt_attns[i], 
             prompt_attn=True, 
             remove_attention_sink=True,
-            max_layers=32
+            max_layers=32,
+            analysis_type=analysis_type
         )
 
         if args.plot_matrices:
@@ -362,7 +382,7 @@ def analyze_prompt(args, prompt_id):
         'hubs',
         'clusters',
         'communities',
-        'fourier',
+        #'fourier',
         # 'cheeger_constant',
         'commute_time_efficiency',
         # new
@@ -439,7 +459,7 @@ def analyze_prompt(args, prompt_id):
     fig.suptitle(f"Graph Features Analysis for Prompt {prompt_id}", y=1.02)
     plt.tight_layout()
     append_str = "_".join([f"{family}_{size}_{variant}" for family, size, variant in args.models])
-    savefig_path = os.path.join(args.output_dir, f"{base_filename}_all_features_no_sink_layerwise_{append_str}")
+    savefig_path = os.path.join(args.output_dir, f"{base_filename}_all_features_no_sink_{args.analysis_type}_{append_str}")
     plt.savefig(savefig_path + ".png", bbox_inches='tight')
     plt.close(fig)
 

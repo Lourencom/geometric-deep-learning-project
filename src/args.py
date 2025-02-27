@@ -36,6 +36,8 @@ def get_args():
     parser.add_argument("--output_dir", type=str, default="media/feature_plots", help="Directory to save output files")
     parser.add_argument("--attn_dir", type=str, default="data/attn", help="Directory containing attention files")
 
+    # Tokenwise arguments
+    parser.add_argument("--analysis_type", type=str, default="tokenwise", help="Whether to use tokenwise attention")
 
     # Visualization arguments
     parser.add_argument("--plot_matrices", type=bool, default=False, help="Whether to plot attention matrices")

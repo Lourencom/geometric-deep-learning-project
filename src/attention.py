@@ -2,7 +2,7 @@ import argparse
 import os
 import torch
 import numpy as np
-from model import run_model
+from model import run_model, get_tokenwise_attns
 from prompts import filter_prompts
 
 def aggregate_attention_layers(attn_matrices):
@@ -17,7 +17,7 @@ def aggregate_attention_layers(attn_matrices):
     # Multiply successively by the next layer's attention matrix.
     for attn in attn_matrices[1:]:
         A_agg = np.dot(attn, A_agg)
-    return A_agg
+    return np.clip(A_agg, 0, 1) # sometimes numerical errors lead to values slightly outside [0, 1]
 
 
 
@@ -66,6 +66,14 @@ def get_cached_attention(args, attn_dir, model_tuple, prompt_id):
 
 
 def load_attns(args, models=None, save=False, **kwargs):
+    if args.analysis_type == "tokenwise":
+        return load_attn_tokenwise(args, models, save, **kwargs)
+    elif args.analysis_type == "layerwise":
+        return load_attn_layerwise(args, models, save, **kwargs)
+    else:
+        raise ValueError(f"Invalid analysis type: {args.analysis_type}")
+
+def load_attn_layerwise(args, models=None, save=False, **kwargs):
     attn_dicts = []
     models_to_process = models if models is not None else args.models
     
@@ -81,3 +89,21 @@ def load_attns(args, models=None, save=False, **kwargs):
             attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)
         attn_dicts.append(attn_dict)
     return attn_dicts
+
+
+
+def load_attn_tokenwise(args, models=None, save=False, **kwargs):
+    attn_dicts = []
+    models_to_process = models if models is not None else args.models
+    
+    for model_tuple in models_to_process:
+        attn_path = kwargs.get("attn_dir", args.attn_dir)
+        cached_attentions = get_cached_attention(args, attn_path, model_tuple, args.prompt_id)
+        
+        if len(cached_attentions) == 0:
+            args.current_model = model_tuple  # Set current model for processing
+            attn_dict = get_tokenwise_attns(args)
+        else:
+            attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)
+        attn_dicts.append(attn_dict)
+    return [el['attention_matrices'] for el in attn_dicts]
