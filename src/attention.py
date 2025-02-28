@@ -3,7 +3,7 @@ import os
 import torch
 import numpy as np
 from model import run_model, get_tokenwise_attns
-from prompts import filter_prompts
+from prompts import filter_prompts, Prompts
 
 def aggregate_attention_layers(attn_matrices):
     """
@@ -97,13 +97,14 @@ def load_attn_tokenwise(args, models=None, save=False, **kwargs):
     models_to_process = models if models is not None else args.models
     
     for model_tuple in models_to_process:
-        attn_path = kwargs.get("attn_dir", args.attn_dir)
-        cached_attentions = get_cached_attention(args, attn_path, model_tuple, args.prompt_id)
-        
-        if len(cached_attentions) == 0:
-            args.current_model = model_tuple  # Set current model for processing
-            attn_dict = get_tokenwise_attns(args)
-        else:
-            attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)
+        current_model = model_tuple  # Set current model for processing
+        prompts = Prompts(args.prompt_path)       
+        prompt = prompts.get_prompt(
+            prompt_id=args.prompt_id,
+            difficulty=args.prompt_difficulty,
+            category=args.prompt_category,
+            n_shots=args.prompt_n_shots
+        )['prompt']
+        attn_dict = get_tokenwise_attns(current_model, prompt)
         attn_dicts.append(attn_dict)
     return [el['attention_matrices'] for el in attn_dicts]

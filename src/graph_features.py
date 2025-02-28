@@ -43,6 +43,8 @@ def create_graph_single_attn(attn, **kwargs):
 
 
 class GraphFeatures:
+    raised_interpolation_warning = False
+
     def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int, analysis_type = "layerwise", **kwargs):
         """
         attn_timestep_arr: np.ndarray -> for now its simply the prompt attentions
@@ -329,11 +331,16 @@ class GraphFeatures:
     
     def extract(self, feature_name, **kwargs):
         interpolate = kwargs.get("interpolate", False)
+        if interpolate and self.analysis_type == "tokenwise" and not GraphFeatures.raised_interpolation_warning:
+            print("WARNING: Interpolating tokenwise features is not supported, turning off interpolation.")
+            interpolate = False
+            GraphFeatures.raised_interpolation_warning = True
+
         top_k = kwargs.get("top_k", self.top_k)
         
-        if top_k != self.top_k: # recreate graphs with new top_k
+        '''if top_k != self.top_k: # recreate graphs with new top_k
             self.top_k = top_k
-            self.attn_graphs = self.create_graphs(self.attn_timestep_arr, top_k=top_k)
+            self.attn_graphs = self.create_graphs(self.attn_timestep_arr, top_k=top_k)'''
 
         feature_arr = self.feature_fn_map[feature_name](**kwargs)
         if interpolate:
@@ -368,11 +375,11 @@ def analyze_prompt(args, prompt_id):
 
         if args.plot_matrices:
             # Plot attention matrices
-            matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_identifier}_no_sink_layerwise")
+            matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_identifier}_no_sink_{args.analysis_type}")
             graph_features[model_identifier].plot_layerwise_attention_matrices(matrix_filename)
 
     features = [
-        'clustering', 
+        #'clustering', 
         'average_shortest_path_length', 
         'forman_ricci',
         #'ollivier_ricci',
@@ -417,7 +424,7 @@ def analyze_prompt(args, prompt_id):
             # Handle features that return multiple values
             if feature in ['pagerank', 'eigenvector_centrality']:
                 # mean_values = graph_features[model_identifier].extract(feature, interpolate=True, aggregation="mean")
-                max_values = graph_features[model_identifier].extract(feature, interpolate=True, aggregation="max")
+                agg_values = graph_features[model_identifier].extract(feature, interpolate=True, aggregation="max")
                 """
                 ax.plot(mean_values, 
                        label=f"{model_identifier} (mean)",
@@ -426,7 +433,7 @@ def analyze_prompt(args, prompt_id):
                        markevery=5,
                        markersize=4)
                 """
-                ax.plot(max_values, 
+                ax.plot(agg_values, 
                        label=f"{model_identifier} (max)",
                        linestyle=linestyle,
                        marker=marker,
@@ -442,7 +449,7 @@ def analyze_prompt(args, prompt_id):
                        markevery=5,
                        markersize=4)
             
-        ax.set_xlabel("Layers")
+        ax.set_xlabel("Layers" if args.analysis_type == "layerwise" else "Tokens")
         ax.set_ylabel(feature)
         ax.set_title(feature)
         ax.grid(True)

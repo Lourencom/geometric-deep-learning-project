@@ -356,7 +356,7 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
     }
 
 
-def get_tokenwise_attns(model_family="llama", model_size="small", model_variant="instruct", prompt="Explain the concept of attention in transformer models."):
+def get_tokenwise_attns(current_model, prompt="Explain the concept of attention in transformer models."):
     """
     Example function demonstrating how to use get_token_by_token_attention.
     
@@ -370,7 +370,8 @@ def get_tokenwise_attns(model_family="llama", model_size="small", model_variant=
         The attention data from get_token_by_token_attention
     """
     # Get the model and tokenizer
-    model, tokenizer = get_model_and_tokenizer(model_family.models[0][0], model_size, model_variant)
+    model_family, model_size, model_variant = current_model
+    model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
     
     # Get token-by-token attention
 
