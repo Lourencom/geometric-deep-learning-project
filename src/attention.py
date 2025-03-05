@@ -7,17 +7,34 @@ from prompts import filter_prompts, Prompts
 
 def aggregate_attention_layers(attn_matrices):
     """
-    Aggregates a list of attention matrices using matrix multiplication that represents the overall information flow across layers.
-    Example:
-        For two layers, the aggregated attention is computed as:
-            A_agg = A_layer2 @ A_layer1
+    Aggregates a list of attention matrices.
+
+    Uses attention rollout. https://arxiv.org/abs/2005.00928
+
     """
-    # Start with the first layer's attention matrix.
-    A_agg = attn_matrices[0]
-    # Multiply successively by the next layer's attention matrix.
-    for attn in attn_matrices[1:]:
-        A_agg = np.dot(attn, A_agg)
-    return np.clip(A_agg, 0, 1) # sometimes numerical errors lead to values slightly outside [0, 1]
+    discard_ratio = 0.0
+    # init rollout with identity matrix
+    rollout = np.eye(attn_matrices[0].shape[0])
+
+    for layer_idx, attn in enumerate(attn_matrices):
+        # optionally discard certai ratio of lowest attn values
+        if discard_ratio > 0:
+            flat = attn.flatten()
+            threshold = np.quantile(flat, discard_ratio)
+            attn = np.where(attn < threshold, 0, attn)
+        
+        # Add the residual connection by summing with the identity matrix
+        attn_with_residual = attn + np.eye(attn.shape[0])
+        
+        # Normalize each row so that the attention weights sum to 1
+        attn_norm = attn_with_residual / attn_with_residual.sum(axis=-1, keepdims=True)
+        
+        # Multiply the normalized attention with the cumulative rollout.
+        # Note: Using matrix multiplication (@) such that the order reflects the
+        # sequential propagation of attention from the first to the last layer.
+        rollout = attn_norm @ rollout
+    
+    return rollout
 
 
 
