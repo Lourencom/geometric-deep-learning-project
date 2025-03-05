@@ -1,8 +1,6 @@
-import argparse
 import os
 import torch
 import numpy as np
-from model import run_model
 from prompts import filter_prompts, Prompts
 from constants import get_model_and_tokenizer
 from model_utils import sample_next_token
@@ -159,26 +157,9 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
 
 
 def get_tokenwise_attns(current_model, prompt="Explain the concept of attention in transformer models."):
-    """
-    Example function demonstrating how to use get_token_by_token_attention.
-    
-    Args:
-        model_family: The model family to use (e.g., "llama", "bloom")
-        model_size: The model size to use (e.g., "small", "large")
-        model_variant: The model variant to use (e.g., "causal", "instruct")
-        prompt: The prompt text to use
-        
-    Returns:
-        The attention data from get_token_by_token_attention
-    """
-    # Get the model and tokenizer
     model_family, model_size, model_variant = current_model
     model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
-    
-    # Get token-by-token attention
-
     attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=50)        
-    
     return attention_data
 
 def get_cached_attention(attn_dir, model_tuple, prompt_id, prompt_difficulty, prompt_category, prompt_n_shots):
@@ -191,21 +172,6 @@ def get_cached_attention(attn_dir, model_tuple, prompt_id, prompt_difficulty, pr
     
     cached_attentions = filter_prompts(cached_attention_files, prompt_difficulty, prompt_category, prompt_n_shots, model_identifier)
     return cached_attentions
-
-
-def load_attn_layerwise(args, attn_path, models_to_process, save=False):
-    attn_dicts = []
-    
-    for model_tuple in models_to_process:
-        cached_attentions = get_cached_attention(attn_path, model_tuple, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots)
-        
-        if len(cached_attentions) == 0:
-            outputs, *_ = run_model(args)
-            attn_dict = extract_attention(model_tuple, args.prompt_id, outputs, attn_path, save=save)["prompt_attns"]
-        else:
-            attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)
-        attn_dicts.append(attn_dict)
-    return attn_dicts
 
 
 def load_attns(args, models=None, save=False, **kwargs):

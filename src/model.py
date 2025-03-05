@@ -1,8 +1,9 @@
 import torch
 import os
+import numpy as np
 from prompts import Prompts
 from constants import get_model_and_tokenizer
-from attention import get_token_by_token_attention
+from attention import get_token_by_token_attention, get_cached_attention, extract_attention
 from utils import store_answer, save_attention_data
 
 def run_model(args, answer_dir=None):
@@ -74,6 +75,22 @@ def run_model(args, answer_dir=None):
     store_answer(args.current_model, answer_dir, answer, prompt_text, args.prompt_id)
     
     return [prompt_outputs, intermediate_outputs], answer, prompt_text, prompt['difficulty'], prompt['category'], prompt['n_shots']
+
+
+def load_attn_layerwise(args, attn_path, models_to_process, save=False):
+    attn_dicts = []
+    
+    for model_tuple in models_to_process:
+        cached_attentions = get_cached_attention(attn_path, model_tuple, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots)
+        
+        if len(cached_attentions) == 0:
+            outputs, *_ = run_model(args)
+            attn_dict = extract_attention(model_tuple, args.prompt_id, outputs, attn_path, save=save)["prompt_attns"]
+        else:
+            attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)
+        attn_dicts.append(attn_dict)
+    return attn_dicts
+
 
 def process_token_attentions(attention_matrices):
     """
