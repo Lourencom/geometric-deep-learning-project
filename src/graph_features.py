@@ -10,7 +10,7 @@ import math
 import seaborn as sns
 from graph_metrics import *
 
-def create_graph_from_attn_matrix(attn, mode="top_k", top_k=10, threshold=0.5):
+def create_graph_from_attn_matrix(attn, mode="top_k", top_k=10, threshold=0.5, **kwargs):
     """
     I am given a single attention matrix (NxN) and I want to create a graph from it.
     Edges are chosen based on the top k values in the attention matrix.
