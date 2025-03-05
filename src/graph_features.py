@@ -7,12 +7,13 @@ from GraphRicciCurvature.FormanRicci import FormanRicci
 from GraphRicciCurvature.OllivierRicci import OllivierRicci
 
 from attention import aggregate_attention_layers, load_attns
-from visualization import plot_attention_matrix
+from visualization import plot_attention_matrix, plot_features
 from utils import relative_to_absolute_path
 from args import get_args
 import math
 import seaborn as sns
 from graph_metrics import *
+from prompts import Prompts
 
 def create_graph_single_attn(attn, **kwargs):
     """
@@ -56,7 +57,6 @@ class GraphFeatures:
 
     def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int = None, analysis_type = "tokenwise", **kwargs):
         """
-        attn_timestep_arr: np.ndarray -> for now its simply the prompt attentions
         Shape 4D: (layers, heads, n_query, n_key)
         """
 
@@ -65,7 +65,6 @@ class GraphFeatures:
 
         self.prompt_attn = kwargs.get("prompt_attn", False)
         self.top_k = kwargs.get("top_k", None) # choose top k edges
-        self.attn_timestep_arr = attn_timestep_arr
         self.analysis_type = analysis_type
         self.max_layers = max_layers
         #self.n_tokens = self.attn_arr.shape[1]
@@ -90,9 +89,9 @@ class GraphFeatures:
             "eigenvector_centrality": lambda G: compute_max_eigenvector_centrality(G),
             "cycle_count": lambda G: compute_cycle_count(G),
         }
-        breakpoint()
-        self.attn_graphs = self.create_graphs(attn_timestep_arr, **kwargs) # 1 graph per timestep
-        breakpoint()
+
+        self.raw_attn_matrices = attn_timestep_arr
+        self.attn_graphs = self.create_graphs(self.raw_attn_matrices, **kwargs) # 1 graph per timestep
 
 
     def extract(self, feature_name, **kwargs):
@@ -102,7 +101,10 @@ class GraphFeatures:
             interpolate = False
             GraphFeatures.raised_interpolation_warning = True
 
-        feature_arr = self.feature_fn_map[feature_name](**kwargs)
+        feature_arr = []
+        for attn_graph in self.attn_graphs:
+            feature_arr.append(self.feature_fn_map[feature_name](attn_graph))
+            
         if interpolate:
             feature_arr = self.__interpolate_to_max_layers(feature_arr)
         return feature_arr
@@ -149,15 +151,25 @@ class GraphFeatures:
     
 
     def create_graphs(self, attn_arr, **kwargs):
-        if self.prompt_attn:
-            if self.analysis_type == "layerwise":
-                graphs = self.create_layerwise_graphs(attn_arr, **kwargs)
-            elif self.analysis_type == "tokenwise":
-                graphs = self.create_tokenwise_graphs(attn_arr, **kwargs)
-            else:
-                raise NotImplementedError("Invalid analysis type")
-        else:
+        # FIXME !!!! Remove self.prompt_attn and fix the plot_raw_attention_matrices function to reduce dupe code
+        """Create graphs from attention matrices with specified strategy."""
+        if not self.prompt_attn:
             raise NotImplementedError("Intermediate attention not implemented, has diff shapes")
+        
+        # Plot raw attention matrices before graph creation if requested
+        if kwargs.get("plot_raw", False):
+            save_path = kwargs.get("save_path", None)
+            if save_path:
+                self.plot_raw_attention_matrices(attn_arr, save_path)
+        
+        # Create graphs based on analysis type
+        if self.analysis_type == "layerwise":
+            graphs = self.create_layerwise_graphs(attn_arr, **kwargs)
+        elif self.analysis_type == "tokenwise":
+            graphs = self.create_tokenwise_graphs(attn_arr, **kwargs)
+        else:
+            raise NotImplementedError("Invalid analysis type")
+        
         return graphs
     
 
@@ -243,121 +255,50 @@ class GraphFeatures:
         x_new = np.linspace(0, 1, new_n_layers)
         return np.interp(x_new, x_old, feature_arr)
 
-
-def analyze_prompt(args, prompt_id):
-    """Run the analysis for a single prompt"""
-    args.prompt_id = prompt_id  # Set current prompt ID
-    analysis_type = args.analysis_type
-    print(f"\nAnalyzing prompt {prompt_id}...")
-
-    base_filename = f"prompt_{prompt_id}"
-    
-    # Load attention data
-    stored_prompt_attns = load_attns(args, models=args.models, attn_dir=args.attn_dir, save=True, tokenwise=analysis_type == "tokenwise")
-    
-    # Create graph features for each model
-    graph_features = {}
-    for i, model_tuple in enumerate(args.models):
-        family, size, variant = model_tuple
-        model_identifier = f"{family}_{size}_{variant}"
+    def plot_raw_attention_matrices(self, attn_arr, save_path):
+        """Plot raw attention matrices before any processing."""
+        if self.analysis_type == "layerwise":
+            attn_avg = np.mean(attn_arr, axis=1)  # avg over heads
+            matrices = attn_avg
+            title_prefix = "Layer"
+        else:  # tokenwise
+            matrices = []
+            for i in range(len(attn_arr)):
+                layer_attns = []
+                for j in range(len(attn_arr[i])):
+                    attn = (attn_arr[i][j]
+                            .cpu()
+                            .squeeze()
+                            .mean(axis=0)  # average over heads
+                            .to(torch.float16)
+                            .numpy())
+                
+                    # remove sink
+                    attn = attn[1:, 1:]
+                    layer_attns.append(attn)
+                matrices.append(aggregate_attention_layers(layer_attns))
+            title_prefix = "Token"
         
+        n = len(matrices)
+        cols = math.ceil(math.sqrt(n))
+        rows = math.ceil(n / cols)
         
-        graph_features[model_identifier] = GraphFeatures(
-            stored_prompt_attns[i], 
-            prompt_attn=True, 
-            remove_attention_sink=True,
-            analysis_type=analysis_type
-        )
-
-        if args.plot_matrices:
-            # Plot attention matrices
-            matrix_filename = os.path.join(args.output_dir, f"{base_filename}_{model_identifier}_no_sink_{analysis_type}")
-            graph_features[model_identifier].plot_attention_matrices(matrix_filename, mode=analysis_type)
-
-    features = [
-        #'clustering', 
-        #'average_shortest_path_length', 
-        #'forman_ricci',
-        #'ollivier_ricci',
-        'average_degree',
-        #'connectivity',
-        #'sparseness',
-        'hubs',
-        #'clusters',
-        'communities',
-        #'fourier',
-        # 'cheeger_constant',
-        'commute_time_efficiency',
-        # new
-        'pagerank',
-        'eigenvector_centrality',
-        'cycle_count',
-    ]
-
-    # Create a single figure with subplots for all features
-    n_features = len(features)
-    n_cols = 2
-    n_rows = (n_features + 1) // 2  # Ceiling division
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5*n_rows))
-    axes = axes.flatten()  # Flatten to make indexing easier
-    
-    # Plot each feature in its own subplot
-    linestyles = ['-', '--', ':', '-.'] # Different line styles
-    markers = ['o', 's', '^', 'D', 'v', '>', '<', 'p'] # Different markers
-    
-    for idx, feature in enumerate(features):
-        print(f"Running {feature}...")
-        ax = axes[idx]
+        fig, axes = plt.subplots(rows, cols, figsize=(cols*6, rows*5))
+        if n == 1:
+            axes = [axes]
+        else:
+            axes = axes.flatten()
         
-        for i, model_tuple in enumerate(args.models):
-            family, size, variant = model_tuple
-            model_identifier = f"{family}_{size}_{variant}"
-            
-            # Cycle through linestyles and markers
-            linestyle = linestyles[i % len(linestyles)]
-            marker = markers[i % len(markers)]
-
-            # Handle features that return multiple values
-            feature_values = graph_features[model_identifier].extract(feature, interpolate=True)
-            ax.plot(feature_values, 
-                    label=model_identifier,
-                    linestyle=linestyle,
-                    marker=marker,
-                    markevery=5,
-                    markersize=4)
-            
-        ax.set_xlabel("Layers" if analysis_type == "layerwise" else "Tokens")
-        ax.set_ylabel(feature)
-        ax.set_title(feature)
-        ax.grid(True)
-    
-    # Remove any unused subplots
-    for idx in range(len(features), len(axes)):
-        fig.delaxes(axes[idx])
-    
-    # Add a single legend for the entire figure
-    handles, labels = axes[0].get_legend_handles_labels()
-    fig.legend(handles, labels, loc='center right', bbox_to_anchor=(0.98, 0.5))
-    
-    # Adjust layout and save
-    fig.suptitle(f"Graph Features Analysis for Prompt {prompt_id}", y=1.02)
-    plt.tight_layout()
-    append_str = "_".join([f"{family}_{size}_{variant}" for family, size, variant in args.models])
-    savefig_path = os.path.join(args.output_dir, f"{base_filename}_all_features_no_sink_{analysis_type}_{append_str}")
-    plt.savefig(savefig_path + ".png", bbox_inches='tight')
-    plt.close(fig)
-
-
-def main():
-    args = get_args()
-    os.makedirs(args.output_dir, exist_ok=True)
-    os.makedirs(args.attn_dir, exist_ok=True)
-
-    for prompt_id in args.prompt_ids:
-        analyze_prompt(args, prompt_id)
-
-    print("\nDone")
-
-
-if __name__ == "__main__":
-    main()
+        for i, matrix in enumerate(matrices):
+            ax = axes[i]
+            sns.heatmap(matrix, cmap="Reds", ax=ax, cbar=True)
+            ax.set_title(f"Raw {title_prefix} {i} Attention")
+            ax.set_xlabel("Key Tokens")
+            ax.set_ylabel("Query Tokens")
+        
+        for j in range(i + 1, len(axes)):
+            fig.delaxes(axes[j])
+        
+        plt.tight_layout()
+        plt.savefig(save_path + "_raw.png", bbox_inches='tight')
+        plt.close(fig)

@@ -1,6 +1,6 @@
 import torch
 import os
-from utils import get_git_root
+from utils import get_git_root, relative_to_absolute_path
 from prompts import Prompts
 from constants import Constants
 
@@ -66,7 +66,7 @@ def run_model(args):
         'token_attentions': token_attentions
     }
 
-    store_answer(args, answer, prompt_text, args.prompt_id)
+    store_answer(args.current_model, args.output_dir, answer, prompt_text, args.prompt_id)
     
     return [prompt_outputs, intermediate_outputs], answer, prompt_text, prompt['difficulty'], prompt['category'], prompt['n_shots']
 
@@ -122,13 +122,12 @@ def process_token_attentions(attention_matrices):
     
     return token_attentions
 
-def store_answer(args, answer, prompt_text, prompt_id):
-    git_root_path = get_git_root()
-    output_dir = os.path.join(git_root_path, args.output_dir)
+def store_answer(current_model, output_dir, answer, prompt_text, prompt_id):
+    output_dir = relative_to_absolute_path(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     
     # Save the prompt and the answer to a text file for reference
-    answer_file = os.path.join(output_dir, f"generated_answer_{args.current_model}_{prompt_id}.txt")
+    answer_file = os.path.join(output_dir, f"generated_answer_{current_model}_{prompt_id}.txt")
     with open(answer_file, "w") as f:
         f.write("Prompt:\n")
         f.write(prompt_text + "\n\n")
@@ -316,6 +315,11 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
     
     # Generate tokens one by one
     with torch.no_grad():
+        # First get prompt attention
+        prompt_outputs = model(current_ids, output_attentions=True, return_dict=True)
+        prompt_attentions = prompt_outputs.attentions
+        
+        # Then generate tokens
         for _ in range(max_new_tokens):
             # Forward pass with attention outputs
             outputs = model(current_ids, output_attentions=True, return_dict=True)
@@ -348,11 +352,13 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
     
     return {
         'prompt_tokens': input_ids,
+        'prompt_attentions': prompt_attentions,
         'generated_tokens': generated_token_ids,
         'full_text': full_text,
         'generated_text': generated_text,
         'attention_matrices': attention_matrices,
-        'token_texts': token_texts
+        'token_texts': token_texts,
+        'prompt_text': prompt_text,
     }
 
 

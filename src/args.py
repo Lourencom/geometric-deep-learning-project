@@ -33,7 +33,7 @@ def get_args():
     parser.add_argument("--prompt_n_shots", type=int, default=None, help="Number of shots for few-shot learning")
     
     # Output arguments
-    parser.add_argument("--output_dir", type=str, default="media/feature_plots", help="Directory to save output files")
+    parser.add_argument("--output_dir", type=str, default="experiment_results/", help="Directory to save output files")
     parser.add_argument("--attn_dir", type=str, default="data/attn", help="Directory containing attention files")
 
     # Tokenwise arguments
