@@ -157,7 +157,6 @@ class GraphFeatures:
     def plot_raw_attention_matrices(self, save_path):
         attn_arr = self.raw_attn_matrices
         """Plot raw attention matrices before any processing."""
-
         matrices = []
         for i in range(len(attn_arr)):
             layer_attns = []

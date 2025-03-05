@@ -155,13 +155,6 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
         'prompt_text': prompt_text,
     }
 
-
-def get_tokenwise_attns(current_model, prompt="Explain the concept of attention in transformer models."):
-    model_family, model_size, model_variant = current_model
-    model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
-    attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=50)        
-    return attention_data
-
 def get_cached_attention(attn_dir, model_tuple, prompt_id, prompt_difficulty, prompt_category, prompt_n_shots):
     family, size, variant = model_tuple
     model_identifier = f"{family}_{size}_{variant}"
@@ -174,29 +167,36 @@ def get_cached_attention(attn_dir, model_tuple, prompt_id, prompt_difficulty, pr
     return cached_attentions
 
 
-def load_attns(args, models=None, save=False, **kwargs):
-    if args.analysis_type == "tokenwise":
-        return load_attn_tokenwise(args, models, save, **kwargs)
+def load_attns(models, prompt_path, prompt_id, prompt_difficulty, prompt_category, prompt_n_shots, analysis_type="tokenwise"):
+    if analysis_type == "tokenwise":
+        return load_attn_tokenwise(
+            models,
+            prompt_path, prompt_id, prompt_difficulty, prompt_category, prompt_n_shots
+            )
     else:
-        raise ValueError(f"Invalid analysis type: {args.analysis_type}")
+        raise ValueError(f"Invalid analysis type: {analysis_type}")
 
 
-def load_attn_tokenwise(args, models=None, save=False, **kwargs):
+def load_attn_tokenwise(models, prompt_path,prompt_id, prompt_difficulty, prompt_category, prompt_n_shots, max_new_tokens=50):
     attn_dicts = []
-    models_to_process = models if models is not None else args.models
     
-    for model_tuple in models_to_process:
-        prompts = Prompts(args.prompt_path)       
+    for model_tuple in models:
+        prompts = Prompts(prompt_path)       
         prompt = prompts.get_prompt(
-            prompt_id=args.prompt_id,
-            difficulty=args.prompt_difficulty,
-            category=args.prompt_category,
-            n_shots=args.prompt_n_shots
+            prompt_id=prompt_id,
+            difficulty=prompt_difficulty,
+            category=prompt_category,
+            n_shots=prompt_n_shots
         )['prompt']
         
-        attn_dict = get_tokenwise_attns(model_tuple, prompt)
+
+        # Get tokenwise attentions
+        model_family, model_size, model_variant = model_tuple
+        model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
+        attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=max_new_tokens)
+
         # Extract just the attention matrices list from the dictionary
-        attn_matrices = attn_dict['attention_matrices']
+        attn_matrices = attention_data['attention_matrices']
         attn_dicts.append(attn_matrices)
         
     return attn_dicts

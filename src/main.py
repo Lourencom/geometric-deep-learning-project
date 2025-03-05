@@ -27,9 +27,13 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
     prompts = Prompts(args.prompt_path)
     prompt_data = prompts.get_prompt(prompt_id=prompt_id)
     prompt_text = prompt_data['prompt']
-        
+    
     # Load attention data and model answers
-    stored_prompt_attns = load_attns(args, models=args.models, attn_dir=args.attn_dir, save=True, tokenwise=analysis_type == "tokenwise")
+    stored_prompt_attns = load_attns(
+        args.models,
+        args.prompt_path, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots,
+        analysis_type="tokenwise",
+        )
     
     # Load or generate model answers
     model_answers = {}
