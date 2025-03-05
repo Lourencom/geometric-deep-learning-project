@@ -2,8 +2,10 @@ import argparse
 import os
 import torch
 import numpy as np
-from model import run_model, get_tokenwise_attns
+from model import run_model
 from prompts import filter_prompts, Prompts
+from constants import get_model_and_tokenizer
+from model_utils import sample_next_token
 
 def aggregate_attention_layers(attn_matrices):
     """
@@ -37,8 +39,7 @@ def aggregate_attention_layers(attn_matrices):
     return rollout
 
 
-
-def extract_attention(args, outputs, output_dir, save=False):
+def extract_attention(current_model, prompt_id, outputs, output_dir, save=False):
     """
     Returns an array of attention matrices.
 
@@ -61,16 +62,126 @@ def extract_attention(args, outputs, output_dir, save=False):
         intermediate_attention_arrays.append(intermediate_attn_array)
 
     if save:
-        family, size, variant = args.current_model
+        family, size, variant = current_model
         model_identifier = f"{family}_{size}_{variant}"
         prompt_attns_filename = os.path.join(output_dir, 
-            f"prompt_attention_values_{model_identifier}_{args.prompt_id}.npy")
+            f"prompt_attention_values_{model_identifier}_{prompt_id}.npy")
         np.save(prompt_attns_filename, attention_arrays, allow_pickle=True)
         
     return {"prompt_attns": attention_arrays, "intermediate_attns": intermediate_attention_arrays}
 
 
-def get_cached_attention(args, attn_dir, model_tuple, prompt_id):
+def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=512):
+    """
+    Captures the full attention matrices for each generated token across all layers.
+    
+    This function performs token-by-token generation and captures the attention matrices
+    at each step, preserving the full attention state (all heads, all layers) for each
+    token generation step.
+    
+    Args:
+        model: The HuggingFace model to use for generation
+        tokenizer: The tokenizer corresponding to the model
+        prompt_text: The input prompt text
+        max_new_tokens: Maximum number of tokens to generate
+        
+    Returns:
+        A dictionary containing:
+        - 'prompt_tokens': The tokenized prompt
+        - 'generated_tokens': The generated tokens
+        - 'full_text': The complete text (prompt + generation)
+        - 'attention_matrices': A list of attention matrices for each generation step
+          Each element is a list of layer attentions, where each layer attention is
+          a tensor of shape [batch_size, num_heads, curr_seq_len, curr_seq_len]
+        - 'token_ids': The token IDs for each step of generation
+        - 'token_texts': The decoded text for each generated token
+    """
+    # Tokenize the prompt
+    inputs = tokenizer(prompt_text, return_tensors="pt").to(model.device)
+    input_ids = inputs.input_ids
+    input_length = input_ids.shape[1]
+    
+    # Store the results
+    attention_matrices = []
+    generated_token_ids = []
+    token_texts = []
+    
+    # Start with the prompt tokens
+    current_ids = input_ids.clone()
+    
+    # Generate tokens one by one
+    with torch.no_grad():
+        # First get prompt attention
+        prompt_outputs = model(current_ids, output_attentions=True, return_dict=True)
+        prompt_attentions = prompt_outputs.attentions
+        
+        # Then generate tokens
+        for _ in range(max_new_tokens):
+            # Forward pass with attention outputs
+            outputs = model(current_ids, output_attentions=True, return_dict=True)
+            
+            # Get the next token prediction
+            next_token_logits = outputs.logits[:, -1, :]
+            next_token_id = sample_next_token(current_ids, next_token_logits)
+            
+            # Store the attention matrices for this step
+            # This captures attention for all layers and all heads
+            # Each attention matrix is of shape [batch_size, num_heads, curr_seq_len, curr_seq_len]
+            step_attentions = outputs.attentions
+            attention_matrices.append(step_attentions)
+            
+            # Store the generated token
+            generated_token_ids.append(next_token_id.item())
+            token_text = tokenizer.decode(next_token_id.item())
+            token_texts.append(token_text)
+            
+            # Check if we've hit the end of sequence token
+            if next_token_id.item() == tokenizer.eos_token_id:
+                break
+                
+            # Append the new token to the sequence
+            current_ids = torch.cat([current_ids, next_token_id], dim=1)
+    
+    # Decode the full generated text
+    full_text = tokenizer.decode(current_ids[0], skip_special_tokens=True)
+    generated_text = tokenizer.decode(current_ids[0][input_length:], skip_special_tokens=True)
+    
+    return {
+        'prompt_tokens': input_ids,
+        'prompt_attentions': prompt_attentions,
+        'generated_tokens': generated_token_ids,
+        'full_text': full_text,
+        'generated_text': generated_text,
+        'attention_matrices': attention_matrices,
+        'token_texts': token_texts,
+        'prompt_text': prompt_text,
+    }
+
+
+def get_tokenwise_attns(current_model, prompt="Explain the concept of attention in transformer models."):
+    """
+    Example function demonstrating how to use get_token_by_token_attention.
+    
+    Args:
+        model_family: The model family to use (e.g., "llama", "bloom")
+        model_size: The model size to use (e.g., "small", "large")
+        model_variant: The model variant to use (e.g., "causal", "instruct")
+        prompt: The prompt text to use
+        
+    Returns:
+        The attention data from get_token_by_token_attention
+    """
+    # Get the model and tokenizer
+    model_family, model_size, model_variant = current_model
+    model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
+    
+    # Get token-by-token attention
+
+    attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=50)        
+    
+    return attention_data
+
+def get_cached_attention(attn_dir, model_tuple, prompt_id, prompt_difficulty, prompt_category, prompt_n_shots):
     family, size, variant = model_tuple
     model_identifier = f"{family}_{size}_{variant}"
     
@@ -78,8 +189,23 @@ def get_cached_attention(args, attn_dir, model_tuple, prompt_id):
                         if "prompt_attention_values" in el and el.endswith(".npy") 
                         and f"_{prompt_id}" in el and model_identifier in el]
     
-    cached_attentions = filter_prompts(cached_attention_files, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots, model_identifier)
+    cached_attentions = filter_prompts(cached_attention_files, prompt_difficulty, prompt_category, prompt_n_shots, model_identifier)
     return cached_attentions
+
+
+def load_attn_layerwise(args, attn_path, models_to_process, save=False):
+    attn_dicts = []
+    
+    for model_tuple in models_to_process:
+        cached_attentions = get_cached_attention(attn_path, model_tuple, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots)
+        
+        if len(cached_attentions) == 0:
+            outputs, *_ = run_model(args)
+            attn_dict = extract_attention(model_tuple, args.prompt_id, outputs, attn_path, save=save)["prompt_attns"]
+        else:
+            attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)
+        attn_dicts.append(attn_dict)
+    return attn_dicts
 
 
 def load_attns(args, models=None, save=False, **kwargs):
@@ -87,23 +213,6 @@ def load_attns(args, models=None, save=False, **kwargs):
         return load_attn_tokenwise(args, models, save, **kwargs)
     else:
         raise ValueError(f"Invalid analysis type: {args.analysis_type}")
-
-def load_attn_layerwise(args, models=None, save=False, **kwargs):
-    attn_dicts = []
-    models_to_process = models if models is not None else args.models
-    
-    for model_tuple in models_to_process:
-        attn_path = kwargs.get("attn_dir", args.attn_dir)
-        cached_attentions = get_cached_attention(args, attn_path, model_tuple, args.prompt_id)
-        
-        if len(cached_attentions) == 0:
-            args.current_model = model_tuple  # Set current model for processing
-            outputs, *_ = run_model(args)
-            attn_dict = extract_attention(args, outputs, attn_path, save=save)["prompt_attns"]
-        else:
-            attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)
-        attn_dicts.append(attn_dict)
-    return attn_dicts
 
 
 def load_attn_tokenwise(args, models=None, save=False, **kwargs):
@@ -124,73 +233,5 @@ def load_attn_tokenwise(args, models=None, save=False, **kwargs):
     return [el['attention_matrices'] for el in attn_dicts]
 
 
-def save_attention_data(attention_data, output_path):
-    """
-    Saves the attention data to disk for later analysis.
-    
-    Args:
-        attention_data: The output from get_token_by_token_attention
-        output_path: Path to save the data
-        
-    Returns:
-        The path to the saved file
-    """
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    # Convert attention matrices to CPU before saving
-    cpu_attention_data = attention_data.copy()
-    
-    # Process attention matrices
-    cpu_attention_matrices = []
-    for step_attentions in attention_data['attention_matrices']:
-        cpu_step_attentions = []
-        for layer_attention in step_attentions:
-            # Move to CPU
-            cpu_layer_attention = layer_attention.cpu()
-            cpu_step_attentions.append(cpu_layer_attention)
-        cpu_attention_matrices.append(cpu_step_attentions)
-    
-    cpu_attention_data['attention_matrices'] = cpu_attention_matrices
-    
-    # Move prompt tokens to CPU
-    cpu_attention_data['prompt_tokens'] = attention_data['prompt_tokens'].cpu()
-    
-    # Save to disk
-    torch.save(cpu_attention_data, output_path)
-    
-    return output_path
 
-def load_attention_data(input_path, device=None):
-    """
-    Loads the attention data from disk.
-    
-    Args:
-        input_path: Path to the saved attention data
-        device: Device to load the tensors to (None for CPU)
-        
-    Returns:
-        The loaded attention data
-    """
-    # Load from disk
-    attention_data = torch.load(input_path)
-    
-    # Move to specified device if needed
-    if device is not None:
-        # Process attention matrices
-        device_attention_matrices = []
-        for step_attentions in attention_data['attention_matrices']:
-            device_step_attentions = []
-            for layer_attention in step_attentions:
-                # Move to device
-                device_layer_attention = layer_attention.to(device)
-                device_step_attentions.append(device_layer_attention)
-            device_attention_matrices.append(device_step_attentions)
-        
-        attention_data['attention_matrices'] = device_attention_matrices
-        
-        # Move prompt tokens to device
-        attention_data['prompt_tokens'] = attention_data['prompt_tokens'].to(device)
-    
-    return attention_data
 

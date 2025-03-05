@@ -1,6 +1,5 @@
 from args import get_args
-from model import run_model, store_answer
-from attention import extract_attention
+from model import run_model
 from visualization import plot_features
 from prompts import Prompts
 from attention import load_attns
