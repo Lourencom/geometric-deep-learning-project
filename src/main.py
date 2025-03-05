@@ -50,8 +50,10 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                 model_answers[model_identifier] = answer
         else:
             # If we don't have a stored answer, we need to generate one
-            args.current_model = model_tuple
-            _, answer, _, _, _, _ = run_model(args, answer_dir=answers_dir)
+            _, answer, _, _, _, _ = run_model(
+                args.prompt_path, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots,
+                model_tuple, answers_dir
+                )
             model_answers[model_identifier] = answer
 
     # Plot raw matrices once per model (not per strategy)

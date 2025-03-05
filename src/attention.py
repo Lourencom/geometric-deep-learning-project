@@ -186,7 +186,6 @@ def load_attn_tokenwise(args, models=None, save=False, **kwargs):
     models_to_process = models if models is not None else args.models
     
     for model_tuple in models_to_process:
-        current_model = model_tuple  # Set current model for processing
         prompts = Prompts(args.prompt_path)       
         prompt = prompts.get_prompt(
             prompt_id=args.prompt_id,
@@ -194,10 +193,10 @@ def load_attn_tokenwise(args, models=None, save=False, **kwargs):
             category=args.prompt_category,
             n_shots=args.prompt_n_shots
         )['prompt']
-        attn_dict = get_tokenwise_attns(current_model, prompt)
-        attn_dicts.append(attn_dict)
-    return [el['attention_matrices'] for el in attn_dicts]
-
-
-
-
+        
+        attn_dict = get_tokenwise_attns(model_tuple, prompt)
+        # Extract just the attention matrices list from the dictionary
+        attn_matrices = attn_dict['attention_matrices']
+        attn_dicts.append(attn_matrices)
+        
+    return attn_dicts

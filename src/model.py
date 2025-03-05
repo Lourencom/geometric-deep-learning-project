@@ -6,17 +6,20 @@ from constants import get_model_and_tokenizer
 from attention import get_token_by_token_attention, get_cached_attention, extract_attention
 from utils import store_answer, save_attention_data
 
-def run_model(args, answer_dir=None):
+def run_model(
+        prompt_path, prompt_id, prompt_difficulty, prompt_category, prompt_n_shots,
+        current_model, answer_dir
+        ):
     # Unpack the current model tuple
-    family, size, variant = args.current_model
+    family, size, variant = current_model
     model, tokenizer = get_model_and_tokenizer(family, size, variant)
 
-    prompts = Prompts(args.prompt_path)       
+    prompts = Prompts(prompt_path)       
     prompt = prompts.get_prompt(
-        prompt_id=args.prompt_id,
-        difficulty=args.prompt_difficulty,
-        category=args.prompt_category,
-        n_shots=args.prompt_n_shots
+        prompt_id=prompt_id,
+        difficulty=prompt_difficulty,
+        category=prompt_category,
+        n_shots=prompt_n_shots
     )
 
     prompt_text = prompt['prompt']
@@ -71,8 +74,7 @@ def run_model(args, answer_dir=None):
         'token_attentions': token_attentions
     }
 
-    answer_dir = answer_dir if answer_dir is not None else args.output_dir
-    store_answer(args.current_model, answer_dir, answer, prompt_text, args.prompt_id)
+    store_answer(current_model, answer_dir, answer, prompt_text, prompt_id)
     
     return [prompt_outputs, intermediate_outputs], answer, prompt_text, prompt['difficulty'], prompt['category'], prompt['n_shots']
 
@@ -84,7 +86,10 @@ def load_attn_layerwise(args, attn_path, models_to_process, save=False):
         cached_attentions = get_cached_attention(attn_path, model_tuple, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots)
         
         if len(cached_attentions) == 0:
-            outputs, *_ = run_model(args)
+            outputs, *_ = run_model(
+                args.prompt_path, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots,
+                model_tuple, args.output_dir,
+            )
             attn_dict = extract_attention(model_tuple, args.prompt_id, outputs, attn_path, save=save)["prompt_attns"]
         else:
             attn_dict = np.load(os.path.join(attn_path, cached_attentions[0]), allow_pickle=True)

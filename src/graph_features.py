@@ -5,7 +5,6 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 from attention import aggregate_attention_layers
-from visualization import plot_attention_matrix
 import math
 import seaborn as sns
 from graph_metrics import *
@@ -42,15 +41,11 @@ def create_graph_from_attn_matrix(attn, mode="top_k", top_k=10, threshold=0.5, *
 class GraphFeatures:
     raised_interpolation_warning = False
 
-    def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int = None, analysis_type: str = "tokenwise", **kwargs):
+    def __init__(self, attn_timestep_arr: np.ndarray, analysis_type: str = "tokenwise", **kwargs):
         """
         Shape 4D: (layers, heads, n_query, n_key)
         """
-
-        self.top_k = kwargs.get("top_k", None) # choose top k edges
         self.analysis_type = analysis_type
-        self.max_layers = max_layers
-        #self.n_tokens = self.attn_arr.shape[1]
 
         self.feature_fn_map = {
             "clustering": lambda G: compute_average_clustering(G),
@@ -73,6 +68,8 @@ class GraphFeatures:
             "cycle_count": lambda G: compute_cycle_count(G),
         }
 
+        # For tokenwise analysis, attn_timestep_arr is a list of attention matrices
+        # Each element represents attention for one generated token
         self.raw_attn_matrices = attn_timestep_arr
         self.attn_graphs = self.create_graphs(self.raw_attn_matrices, **kwargs) # 1 graph per timestep
 
@@ -92,12 +89,8 @@ class GraphFeatures:
             layer_attns = []
             for j in range(len(attn_arr[i])): # for each layer
                 # we now have attn_arr[i][j] which is a 3D tensor of shape (1, n_heads, n_query, n_key)
-                attn = (attn_arr[i][j]
-                        .cpu() # move to cpu
-                        .squeeze() # remove the 1-sized dimension
-                        .mean(axis=0) # average over heads
-                        .to(torch.float16) # convert to float16
-                        .numpy()) # convert to numpy
+                attn = attn_arr[i][j].cpu().squeeze().to(torch.float16).numpy()
+                attn = attn.mean(axis=0) # average over heads
                 
                 # Remove attention sink before aggregation if requested
                 if remove_sink:
