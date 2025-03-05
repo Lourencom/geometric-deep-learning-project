@@ -156,12 +156,6 @@ class GraphFeatures:
         if not self.prompt_attn:
             raise NotImplementedError("Intermediate attention not implemented, has diff shapes")
         
-        # Plot raw attention matrices before graph creation if requested
-        if kwargs.get("plot_raw", False):
-            save_path = kwargs.get("save_path", None)
-            if save_path:
-                self.plot_raw_attention_matrices(attn_arr, save_path)
-        
         # Create graphs based on analysis type
         if self.analysis_type == "layerwise":
             graphs = self.create_layerwise_graphs(attn_arr, **kwargs)
@@ -179,6 +173,8 @@ class GraphFeatures:
             self.plot_layerwise_attention_matrices(save_path)
         elif mode == "tokenwise":
             self.plot_tokenwise_attention_matrices(save_path)
+        elif mode == "raw":
+            self.plot_raw_attention_matrices(save_path)
         else:
             for i, attn_graph in enumerate(self.attn_graphs):
                 plot_attention_matrix(nx.to_numpy_array(attn_graph), save_path + f"_{i}")
@@ -255,7 +251,8 @@ class GraphFeatures:
         x_new = np.linspace(0, 1, new_n_layers)
         return np.interp(x_new, x_old, feature_arr)
 
-    def plot_raw_attention_matrices(self, attn_arr, save_path):
+    def plot_raw_attention_matrices(self, save_path):
+        attn_arr = self.raw_attn_matrices
         """Plot raw attention matrices before any processing."""
         if self.analysis_type == "layerwise":
             attn_avg = np.mean(attn_arr, axis=1)  # avg over heads

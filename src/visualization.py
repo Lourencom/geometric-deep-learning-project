@@ -12,27 +12,8 @@ def plot_attention_matrix(attention_matrix, savepath=None):
         plt.savefig(savepath + ".png")
     plt.close()
 
-def plot_features(graph_features, models, analysis_type, prompt_text, prompt_data, model_answers, save_path):
+def plot_features(features, graph_features, models, analysis_type, prompt_text, prompt_data, model_answers, save_path):
     """Plot features with enhanced information."""
-    features = [
-        #'clustering', 
-        #'average_shortest_path_length', 
-        #'forman_ricci',
-        #'ollivier_ricci',
-        'average_degree',
-        #'connectivity',
-        #'sparseness',
-        'hubs',
-        #'clusters',
-        'communities',
-        #'fourier',
-        # 'cheeger_constant',
-        'commute_time_efficiency',
-        # new
-        'pagerank',
-        'eigenvector_centrality',
-        'cycle_count',
-    ]
     
     n_features = len(features)
     n_cols = 2

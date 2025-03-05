@@ -8,7 +8,7 @@ import transformers
 from transformers import AutoTokenizer
 
 
-def run_model(args):
+def run_model(args, answer_dir=None):
     # Unpack the current model tuple
     family, size, variant = args.current_model
     model, tokenizer = get_model_and_tokenizer(family, size, variant)
@@ -43,6 +43,13 @@ def run_model(args):
             output_scores=True,  # Get scores for each token
             output_attentions=True,  # Get attention matrices
             output_hidden_states=True,  # Get hidden states
+
+            # deterministic genertion and control parameters to encourage shorter responses
+            do_sample=False,
+            min_length=1,
+            repetition_penalty=1.2,
+            length_penalty=1.0,
+            forced_eos_token_id=tokenizer.eos_token_id,
         )
         
         # Extract attention matrices from generation
@@ -66,7 +73,8 @@ def run_model(args):
         'token_attentions': token_attentions
     }
 
-    store_answer(args.current_model, args.output_dir, answer, prompt_text, args.prompt_id)
+    answer_dir = answer_dir if answer_dir is not None else args.output_dir
+    store_answer(args.current_model, answer_dir, answer, prompt_text, args.prompt_id)
     
     return [prompt_outputs, intermediate_outputs], answer, prompt_text, prompt['difficulty'], prompt['category'], prompt['n_shots']
 
@@ -126,8 +134,11 @@ def store_answer(current_model, output_dir, answer, prompt_text, prompt_id):
     output_dir = relative_to_absolute_path(output_dir)
     os.makedirs(output_dir, exist_ok=True)
     
+    family, size, variant = current_model
+    model_identifier = f"{family}_{size}_{variant}"
+    
     # Save the prompt and the answer to a text file for reference
-    answer_file = os.path.join(output_dir, f"generated_answer_{current_model}_{prompt_id}.txt")
+    answer_file = os.path.join(output_dir, f"generated_answer_{model_identifier}_{prompt_id}.txt")
     with open(answer_file, "w") as f:
         f.write("Prompt:\n")
         f.write(prompt_text + "\n\n")
