@@ -85,8 +85,6 @@ def get_cached_attention(args, attn_dir, model_tuple, prompt_id):
 def load_attns(args, models=None, save=False, **kwargs):
     if args.analysis_type == "tokenwise":
         return load_attn_tokenwise(args, models, save, **kwargs)
-    elif args.analysis_type == "layerwise":
-        return load_attn_layerwise(args, models, save, **kwargs)
     else:
         raise ValueError(f"Invalid analysis type: {args.analysis_type}")
 

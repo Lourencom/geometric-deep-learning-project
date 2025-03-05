@@ -13,7 +13,7 @@ def plot_attention_matrix(attention_matrix, savepath=None):
     plt.close()
 
 
-def plot_features(features, graph_features, models, analysis_type, prompt_text, prompt_data, model_answers, save_path):
+def plot_features(features, graph_features, models, prompt_text, prompt_data, model_answers, save_path):
     """Plot features with enhanced information."""
     
     n_features = len(features)
@@ -44,7 +44,7 @@ def plot_features(features, graph_features, models, analysis_type, prompt_text, 
                    markevery=5,
                    markersize=4)
         
-        ax.set_xlabel("Layers" if analysis_type == "layerwise" else "Tokens")
+        ax.set_xlabel("Tokens")
         ax.set_ylabel(feature)
         ax.set_title(feature)
         ax.grid(True)

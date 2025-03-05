@@ -67,7 +67,6 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
             # Create temporary graph features object for raw matrix plotting
             temp_graph_features = GraphFeatures(
                 stored_prompt_attns[i],
-                prompt_attn=True,
                 remove_attention_sink=True,
                 analysis_type=analysis_type,
                 plot_raw=True
@@ -100,7 +99,6 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
             # Create graph features with current strategy
             graph_features[model_identifier] = GraphFeatures(
                 stored_prompt_attns[i],
-                prompt_attn=True,
                 remove_attention_sink=True,
                 analysis_type=analysis_type,
                 plot_raw=True,
@@ -124,7 +122,6 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
             features,
             graph_features,
             args.models,
-            analysis_type,
             prompt_text,
             prompt_data,
             model_answers,

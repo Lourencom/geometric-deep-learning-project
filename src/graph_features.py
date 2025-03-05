@@ -3,33 +3,20 @@ import numpy as np
 import torch
 import networkx as nx
 import matplotlib.pyplot as plt
-from GraphRicciCurvature.FormanRicci import FormanRicci
-from GraphRicciCurvature.OllivierRicci import OllivierRicci
 
-from attention import aggregate_attention_layers, load_attns
-from visualization import plot_attention_matrix, plot_features
-from utils import relative_to_absolute_path
-from args import get_args
+from attention import aggregate_attention_layers
+from visualization import plot_attention_matrix
 import math
 import seaborn as sns
 from graph_metrics import *
-from prompts import Prompts
 
-def create_graph_single_attn(attn, **kwargs):
+def create_graph_from_attn_matrix(attn, mode="top_k", top_k=10, threshold=0.5):
     """
     I am given a single attention matrix (NxN) and I want to create a graph from it.
     Edges are chosen based on the top k values in the attention matrix.
 
     Selects top k outgoing edges (query -> keys) for each query node.
     """
-    mode = kwargs.get("mode", "top_k")
-    if mode == "top_k":
-        top_k = kwargs.get("top_k", attn.shape[0])
-    elif mode == "threshold":
-        threshold = kwargs.get("threshold", 0.5)
-    else:
-        raise ValueError(f"Invalid mode: {mode}")
-
     # Create a graph from the attention matrices
     G = nx.DiGraph()
     for i in range(attn.shape[0]):
@@ -55,15 +42,11 @@ def create_graph_single_attn(attn, **kwargs):
 class GraphFeatures:
     raised_interpolation_warning = False
 
-    def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int = None, analysis_type = "tokenwise", **kwargs):
+    def __init__(self, attn_timestep_arr: np.ndarray, max_layers: int = None, analysis_type: str = "tokenwise", **kwargs):
         """
         Shape 4D: (layers, heads, n_query, n_key)
         """
 
-        if not kwargs.get("prompt_attn", False):
-            raise NotImplementedError("Only prompt analysis is supported for now")
-
-        self.prompt_attn = kwargs.get("prompt_attn", False)
         self.top_k = kwargs.get("top_k", None) # choose top k edges
         self.analysis_type = analysis_type
         self.max_layers = max_layers
@@ -95,29 +78,11 @@ class GraphFeatures:
 
 
     def extract(self, feature_name, **kwargs):
-        interpolate = kwargs.get("interpolate", False)
-        if interpolate and self.analysis_type == "tokenwise" and not GraphFeatures.raised_interpolation_warning:
-            print("WARNING: Interpolating tokenwise features is not supported, turning off interpolation.")
-            interpolate = False
-            GraphFeatures.raised_interpolation_warning = True
-
         feature_arr = []
         for attn_graph in self.attn_graphs:
             feature_arr.append(self.feature_fn_map[feature_name](attn_graph))
             
-        if interpolate:
-            feature_arr = self.__interpolate_to_max_layers(feature_arr)
         return feature_arr
-
-    def create_layerwise_graphs(self, attn_arr, **kwargs):
-        graphs = []
-
-        attn_avg = np.mean(attn_arr, axis=1) # avg over heads
-
-        for i in range(attn_avg.shape[0]):
-            attn = attn_avg[i]
-            graphs.append(create_graph_single_attn(attn, **kwargs))
-        return graphs
 
     def create_tokenwise_graphs(self, attn_arr, **kwargs):
         token_wise_attns = []
@@ -146,38 +111,27 @@ class GraphFeatures:
         graphs = []
         for i in range(len(token_wise_attns)):
             attn = token_wise_attns[i]
-            graphs.append(create_graph_single_attn(attn, **kwargs))
+            graphs.append(create_graph_from_attn_matrix(attn, **kwargs))
         return graphs
     
 
-    def create_graphs(self, attn_arr, **kwargs):
-        # FIXME !!!! Remove self.prompt_attn and fix the plot_raw_attention_matrices function to reduce dupe code
-        """Create graphs from attention matrices with specified strategy."""
-        if not self.prompt_attn:
-            raise NotImplementedError("Intermediate attention not implemented, has diff shapes")
-        
+    def create_graphs(self, attn_arr, **kwargs):        
         # Create graphs based on analysis type
-        if self.analysis_type == "layerwise":
-            graphs = self.create_layerwise_graphs(attn_arr, **kwargs)
-        elif self.analysis_type == "tokenwise":
+        if self.analysis_type == "tokenwise":
             graphs = self.create_tokenwise_graphs(attn_arr, **kwargs)
         else:
-            raise NotImplementedError("Invalid analysis type")
+            raise NotImplementedError("Invalid analysis type, layerwise not supported anymore")
         
         return graphs
     
 
-    def plot_attention_matrices(self, save_path, **kwargs):
-        mode = kwargs.get("mode", "layerwise")
-        if mode == "layerwise":
-            self.plot_layerwise_attention_matrices(save_path)
-        elif mode == "tokenwise":
+    def plot_attention_matrices(self, save_path, mode="tokenwise"):
+        if mode == "tokenwise":
             self.plot_tokenwise_attention_matrices(save_path)
         elif mode == "raw":
             self.plot_raw_attention_matrices(save_path)
         else:
-            for i, attn_graph in enumerate(self.attn_graphs):
-                plot_attention_matrix(nx.to_numpy_array(attn_graph), save_path + f"_{i}")
+            raise NotImplementedError("Layerwise or other modes of attention matrices not implemented anymore")
 
 
     def plot_tokenwise_attention_matrices(self, save_path):
@@ -207,75 +161,27 @@ class GraphFeatures:
         plt.savefig(save_path + ".png", bbox_inches='tight')
         plt.close(fig)
 
-
-
-    def plot_layerwise_attention_matrices(self, save_path):
-        #if self.analysis_type != "layerwise":
-        #    raise NotImplementedError("Only layerwise analysis is supported for now")
-        
-        n = len(self.attn_graphs)
-        # Determine grid dimensions (roughly square)
-        cols = math.ceil(math.sqrt(n))
-        rows = math.ceil(n / cols)
-        
-        fig, axes = plt.subplots(rows, cols, figsize=(cols*6, rows*5))
-        # If only one subplot, wrap it in a list for consistency
-        if n == 1:
-            axes = [axes]
-        else:
-            axes = axes.flatten()
-        
-        for i, attn_graph in enumerate(self.attn_graphs):
-            ax = axes[i]
-            attn_matrix = nx.to_numpy_array(attn_graph)
-            sns.heatmap(attn_matrix, cmap="Reds", ax=ax, cbar=False)
-            ax.set_title(f"Layer {i}")
-            ax.set_xlabel("Key Tokens")
-            ax.set_ylabel("Query Tokens")
-        
-        # Remove any unused subplots if n is not a perfect grid
-        for j in range(i + 1, len(axes)):
-            fig.delaxes(axes[j])
-        
-        plt.tight_layout()
-        plt.savefig(save_path + ".png", bbox_inches='tight')
-        plt.close(fig)
-
-    def __interpolate_to_max_layers(self, feature_arr):
-        if self.max_layers is None:
-            return feature_arr
-            
-        curr_n_layers = len(feature_arr)
-        new_n_layers = self.max_layers
-        x_old = np.linspace(0, 1, curr_n_layers)
-        x_new = np.linspace(0, 1, new_n_layers)
-        return np.interp(x_new, x_old, feature_arr)
-
     def plot_raw_attention_matrices(self, save_path):
         attn_arr = self.raw_attn_matrices
         """Plot raw attention matrices before any processing."""
-        if self.analysis_type == "layerwise":
-            attn_avg = np.mean(attn_arr, axis=1)  # avg over heads
-            matrices = attn_avg
-            title_prefix = "Layer"
-        else:  # tokenwise
-            matrices = []
-            for i in range(len(attn_arr)):
-                layer_attns = []
-                for j in range(len(attn_arr[i])):
-                    attn = (attn_arr[i][j]
-                            .cpu()
-                            .squeeze()
-                            .mean(axis=0)  # average over heads
-                            .to(torch.float16)
-                            .numpy())
-                
-                    # remove sink
-                    attn = attn[1:, 1:]
-                    layer_attns.append(attn)
-                matrices.append(aggregate_attention_layers(layer_attns))
-            title_prefix = "Token"
-        
+
+        matrices = []
+        for i in range(len(attn_arr)):
+            layer_attns = []
+            for j in range(len(attn_arr[i])):
+                attn = (attn_arr[i][j]
+                        .cpu()
+                        .squeeze()
+                        .mean(axis=0)  # average over heads
+                        .to(torch.float16)
+                        .numpy())
+            
+                # remove sink
+                attn = attn[1:, 1:]
+                layer_attns.append(attn)
+            matrices.append(aggregate_attention_layers(layer_attns))
+        title_prefix = "Token"
+    
         n = len(matrices)
         cols = math.ceil(math.sqrt(n))
         rows = math.ceil(n / cols)
