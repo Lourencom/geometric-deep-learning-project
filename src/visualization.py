@@ -12,6 +12,7 @@ def plot_attention_matrix(attention_matrix, savepath=None):
         plt.savefig(savepath + ".png")
     plt.close()
 
+
 def plot_features(features, graph_features, models, analysis_type, prompt_text, prompt_data, model_answers, save_path):
     """Plot features with enhanced information."""
     

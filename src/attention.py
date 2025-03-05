@@ -108,7 +108,6 @@ def load_attn_layerwise(args, models=None, save=False, **kwargs):
     return attn_dicts
 
 
-
 def load_attn_tokenwise(args, models=None, save=False, **kwargs):
     attn_dicts = []
     models_to_process = models if models is not None else args.models
@@ -125,3 +124,75 @@ def load_attn_tokenwise(args, models=None, save=False, **kwargs):
         attn_dict = get_tokenwise_attns(current_model, prompt)
         attn_dicts.append(attn_dict)
     return [el['attention_matrices'] for el in attn_dicts]
+
+
+def save_attention_data(attention_data, output_path):
+    """
+    Saves the attention data to disk for later analysis.
+    
+    Args:
+        attention_data: The output from get_token_by_token_attention
+        output_path: Path to save the data
+        
+    Returns:
+        The path to the saved file
+    """
+    # Create directory if it doesn't exist
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    
+    # Convert attention matrices to CPU before saving
+    cpu_attention_data = attention_data.copy()
+    
+    # Process attention matrices
+    cpu_attention_matrices = []
+    for step_attentions in attention_data['attention_matrices']:
+        cpu_step_attentions = []
+        for layer_attention in step_attentions:
+            # Move to CPU
+            cpu_layer_attention = layer_attention.cpu()
+            cpu_step_attentions.append(cpu_layer_attention)
+        cpu_attention_matrices.append(cpu_step_attentions)
+    
+    cpu_attention_data['attention_matrices'] = cpu_attention_matrices
+    
+    # Move prompt tokens to CPU
+    cpu_attention_data['prompt_tokens'] = attention_data['prompt_tokens'].cpu()
+    
+    # Save to disk
+    torch.save(cpu_attention_data, output_path)
+    
+    return output_path
+
+def load_attention_data(input_path, device=None):
+    """
+    Loads the attention data from disk.
+    
+    Args:
+        input_path: Path to the saved attention data
+        device: Device to load the tensors to (None for CPU)
+        
+    Returns:
+        The loaded attention data
+    """
+    # Load from disk
+    attention_data = torch.load(input_path)
+    
+    # Move to specified device if needed
+    if device is not None:
+        # Process attention matrices
+        device_attention_matrices = []
+        for step_attentions in attention_data['attention_matrices']:
+            device_step_attentions = []
+            for layer_attention in step_attentions:
+                # Move to device
+                device_layer_attention = layer_attention.to(device)
+                device_step_attentions.append(device_layer_attention)
+            device_attention_matrices.append(device_step_attentions)
+        
+        attention_data['attention_matrices'] = device_attention_matrices
+        
+        # Move prompt tokens to device
+        attention_data['prompt_tokens'] = attention_data['prompt_tokens'].to(device)
+    
+    return attention_data
+

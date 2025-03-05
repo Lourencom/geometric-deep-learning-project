@@ -2,11 +2,8 @@ import torch
 import os
 from utils import get_git_root, relative_to_absolute_path
 from prompts import Prompts
-from constants import Constants
-
-import transformers
-from transformers import AutoTokenizer
-
+from constants import get_model_and_tokenizer
+from attention import save_attention_data
 
 def run_model(args, answer_dir=None):
     # Unpack the current model tuple
@@ -62,7 +59,7 @@ def run_model(args, answer_dir=None):
             attention_matrices = generated.decoder_attentions
             
         # Process attention matrices for each generated token
-        token_attentions = process_token_attentions(attention_matrices)
+        token_attentions = attention_matrices # process_token_attentions(attention_matrices)
         
         # Only decode the newly generated tokens
         answer = tokenizer.decode(generated.sequences[0][input_length:], skip_special_tokens=True)
@@ -113,7 +110,7 @@ def process_token_attentions(attention_matrices):
                 
                 # Average across attention heads (or select specific heads)
                 # Shape becomes [seq_len, seq_len]
-                avg_attention = layer_attention[0].mean(dim=0)
+                avg_attention = layer_attention.squeeze().mean(dim=0)
                 layer_attentions.append(avg_attention)
             
             # Store attention for this token generation step
@@ -167,87 +164,6 @@ def store_attention_data(args, token_attentions, prompt_id):
     torch.save(token_attentions, attention_file)
     
     return attention_file
-
-def get_model_and_tokenizer(family, size, variant):
-    """
-    family: str, one of ["llama", "bloom"]
-    size: str, one of ["small", "large", "huge"] for llama,
-          or one of ["560m", "1b1", "1b7", "3b", "7b1"] for bloom
-    variant: str, either "causal" or "instruct"
-    """
-    if family.lower() == "llama":
-        # existing Llama code, e.g.
-        if size == "small":
-            if variant == "causal":
-                model_id = Constants.LLAMA_SMALL_CAUSAL
-            elif variant == "instruct":
-                model_id = Constants.LLAMA_SMALL_INSTRUCT
-            else:
-                raise ValueError("Invalid variant for llama")
-        elif size == "large":
-            if variant == "causal":
-                model_id = Constants.LLAMA_LARGE_CAUSAL
-            elif variant == "instruct":
-                model_id = Constants.LLAMA_LARGE_INSTRUCT
-            else:
-                raise ValueError("Invalid variant for llama")
-        elif size == "huge":
-            if variant == "instruct":
-                model_id = Constants.LLAMA_HUGE_INSTRUCT
-            else:
-                raise ValueError("No causal huge variant for llama")
-        else:
-            raise ValueError("Invalid llama size")
-    
-    elif family.lower() == "bloom":
-        # For BLOOM, use the corresponding string IDs
-        if size == "560m":
-            if variant == "causal":
-                model_id = Constants.BLOOM_560M_CAUSAL
-            elif variant == "instruct":
-                model_id = Constants.BLOOM_560M_INSTRUCT
-            else:
-                raise ValueError("Invalid variant for bloom")
-        elif size == "1b1":
-            if variant == "causal":
-                model_id = Constants.BLOOM_1B1_CAUSAL
-            elif variant == "instruct":
-                model_id = Constants.BLOOM_1B1_INSTRUCT
-            else:
-                raise ValueError("Invalid variant for bloom")
-        elif size == "1b7":
-            if variant == "causal":
-                model_id = Constants.BLOOM_1B7_CAUSAL
-            elif variant == "instruct":
-                model_id = Constants.BLOOM_1B7_INSTRUCT
-            else:
-                raise ValueError("Invalid variant for bloom")
-        elif size == "3b":
-            if variant == "causal":
-                model_id = Constants.BLOOM_3B_CAUSAL
-            elif variant == "instruct":
-                model_id = Constants.BLOOM_3B_INSTRUCT
-            else:
-                raise ValueError("Invalid variant for bloom")
-        elif size == "7b1":
-            if variant == "causal":
-                model_id = Constants.BLOOM_7B1_CAUSAL
-            elif variant == "instruct":
-                model_id = Constants.BLOOM_7B1_INSTRUCT
-            else:
-                raise ValueError("Invalid variant for bloom")
-        else:
-            raise ValueError("Invalid bloom size")
-    else:
-        raise ValueError("Unsupported model family")
-    
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-        model_id,
-        torch_dtype=torch.bfloat16,
-        device_map="auto"
-    )
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    return model, tokenizer
 
 
 def sample_next_token(current_ids, next_token_logits, temperature=1.0, top_p=0.9, top_k=50, repetition_penalty=1.0):
@@ -396,75 +312,6 @@ def get_tokenwise_attns(current_model, prompt="Explain the concept of attention 
     
     return attention_data
 
-def save_attention_data(attention_data, output_path):
-    """
-    Saves the attention data to disk for later analysis.
-    
-    Args:
-        attention_data: The output from get_token_by_token_attention
-        output_path: Path to save the data
-        
-    Returns:
-        The path to the saved file
-    """
-    # Create directory if it doesn't exist
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    
-    # Convert attention matrices to CPU before saving
-    cpu_attention_data = attention_data.copy()
-    
-    # Process attention matrices
-    cpu_attention_matrices = []
-    for step_attentions in attention_data['attention_matrices']:
-        cpu_step_attentions = []
-        for layer_attention in step_attentions:
-            # Move to CPU
-            cpu_layer_attention = layer_attention.cpu()
-            cpu_step_attentions.append(cpu_layer_attention)
-        cpu_attention_matrices.append(cpu_step_attentions)
-    
-    cpu_attention_data['attention_matrices'] = cpu_attention_matrices
-    
-    # Move prompt tokens to CPU
-    cpu_attention_data['prompt_tokens'] = attention_data['prompt_tokens'].cpu()
-    
-    # Save to disk
-    torch.save(cpu_attention_data, output_path)
-    
-    return output_path
-
-def load_attention_data(input_path, device=None):
-    """
-    Loads the attention data from disk.
-    
-    Args:
-        input_path: Path to the saved attention data
-        device: Device to load the tensors to (None for CPU)
-        
-    Returns:
-        The loaded attention data
-    """
-    # Load from disk
-    attention_data = torch.load(input_path)
-    
-    # Move to specified device if needed
-    if device is not None:
-        # Process attention matrices
-        device_attention_matrices = []
-        for step_attentions in attention_data['attention_matrices']:
-            device_step_attentions = []
-            for layer_attention in step_attentions:
-                # Move to device
-                device_layer_attention = layer_attention.to(device)
-                device_step_attentions.append(device_layer_attention)
-            device_attention_matrices.append(device_step_attentions)
-        
-        attention_data['attention_matrices'] = device_attention_matrices
-        
-        # Move prompt tokens to device
-        attention_data['prompt_tokens'] = attention_data['prompt_tokens'].to(device)
-    
-    return attention_data
 
 def batch_analyze_prompts(model, tokenizer, prompts, output_dir=None, max_new_tokens=100):
     """
