@@ -27,7 +27,7 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
     prompts = Prompts(args.prompt_path)
     prompt_data = prompts.get_prompt(prompt_id=prompt_id)
     prompt_text = prompt_data['prompt']
-    
+
     # Load attention data and model answers
     stored_prompt_attns = load_attns(
         args.models,
@@ -149,7 +149,7 @@ if __name__ == "__main__":
     features = [
         'clustering', 
         'average_shortest_path_length', 
-        'forman_ricci',
+        # 'forman_ricci', # division by 0, failed
         #'ollivier_ricci', # does not work, parallelism errors
         'average_degree',
         'connectivity',
