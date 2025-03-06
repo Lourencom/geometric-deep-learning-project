@@ -5,13 +5,36 @@ from prompts import filter_prompts, Prompts
 from constants import get_model_and_tokenizer
 from model_utils import sample_next_token
 
+
+def aggregate_attention_heads(attn_matrices):
+    """
+    Aggregates attention heads across all layers.
+    """
+    aggregated_heads_list = []
+    for layer_i in range(len(attn_matrices)):
+        layer_attn = attn_matrices[layer_i].cpu().to(torch.float16).numpy()
+        layer_attn = layer_attn.squeeze(0)
+        layer_attn = layer_attn.mean(axis=0)
+        aggregated_heads_list.append(layer_attn)
+
+    return aggregated_heads_list
+
 def aggregate_attention_layers(attn_matrices):
     """
     Aggregates a list of attention matrices.
 
     Uses attention rollout. https://arxiv.org/abs/2005.00928
 
+
+    WARNING: THIS HAS TO RECEIVE THE SQUEEZED MATRICES. NO BATCH SIZE!
     """
+    if attn_matrices[0].shape[0] == 1:
+        for attn_matrix in range(len(attn_matrices)):
+            attn_matrices[attn_matrix] = attn_matrices[attn_matrix].squeeze()
+        
+    if attn_matrices[0].ndim != 2:
+        raise ValueError("Attention matrices must be a list/array of 2D matrices (n_query, n_key)")
+    
     discard_ratio = 0.0
     # init rollout with identity matrix
     rollout = np.eye(attn_matrices[0].shape[0])
@@ -112,12 +135,16 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
         # First get prompt attention
         prompt_outputs = model(current_ids, output_attentions=True, return_dict=True)
         prompt_attentions = prompt_outputs.attentions
+        # tuple (layer_1, layer_2, layer_3, ...)
+        # each layer is torch.tensor of shape (batch_size (1), heads, seq_len, seq_len)
         
         # Then generate tokens
         for _ in range(max_new_tokens):
             # Forward pass with attention outputs
             outputs = model(current_ids, output_attentions=True, return_dict=True)
             
+            # FIXME: PAVLE what is this?
+            # why dont we just use generate fn from transformers
             # Get the next token prediction
             next_token_logits = outputs.logits[:, -1, :]
             next_token_id = sample_next_token(current_ids, next_token_logits)

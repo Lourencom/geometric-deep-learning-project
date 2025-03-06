@@ -4,7 +4,7 @@ import torch
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from attention import aggregate_attention_layers
+from attention import aggregate_attention_layers, aggregate_attention_heads
 import math
 import seaborn as sns
 from graph_metrics import *
@@ -38,8 +38,13 @@ def create_graph_from_attn_matrix(attn, mode="top_k", top_k=10, threshold=0.5, *
     return G
 
 
+def normalize_rows(attn):
+    row_sums = np.sum(attn, axis=1, keepdims=True)
+    row_sums[row_sums == 0] = 1
+    return attn / row_sums
+
+
 class GraphFeatures:
-    raised_interpolation_warning = False
 
     def __init__(self, attn_timestep_arr: np.ndarray, analysis_type: str = "tokenwise", **kwargs):
         """
@@ -85,25 +90,19 @@ class GraphFeatures:
         token_wise_attns = []
         remove_sink = kwargs.get("remove_attention_sink", True)
         
-        for i in range(len(attn_arr)): # for each token
-            layer_attns = []
-            for j in range(len(attn_arr[i])): # for each layer
-                # we now have attn_arr[i][j] which is a 3D tensor of shape (1, n_heads, n_query, n_key)
-                attn = attn_arr[i][j].cpu().squeeze().to(torch.float16).numpy()
-                attn = attn.mean(axis=0) # average over heads
-                
-                # Remove attention sink before aggregation if requested
-                if remove_sink:
-                    attn = attn[1:, 1:]  # Remove first row and column
-                
-                layer_attns.append(attn)
-            
+        for autoregressive_step in range(len(attn_arr)): # for each token
+            attn_step = attn_arr[autoregressive_step]
+            layer_attns = aggregate_attention_heads(attn_step)
             aggregated_attn = aggregate_attention_layers(layer_attns)
+            
+            if remove_sink:
+                aggregated_attn = aggregated_attn[1:, 1:]
+            
             token_wise_attns.append(aggregated_attn)
 
         graphs = []
         for i in range(len(token_wise_attns)):
-            attn = token_wise_attns[i]
+            attn = normalize_rows(token_wise_attns[i])
             graphs.append(create_graph_from_attn_matrix(attn, **kwargs))
         return graphs
     
@@ -142,7 +141,7 @@ class GraphFeatures:
         for i, attn_graph in enumerate(self.attn_graphs):
             ax = axes[i]
             attn_matrix = nx.to_numpy_array(attn_graph)
-            sns.heatmap(attn_matrix, cmap="Reds", ax=ax, cbar=False)
+            sns.heatmap(attn_matrix, cmap="Reds", ax=ax)
             ax.set_title(f"Token {i}")
             ax.set_xlabel("Key Tokens")
             ax.set_ylabel("Query Tokens")
@@ -158,21 +157,17 @@ class GraphFeatures:
         attn_arr = self.raw_attn_matrices
         """Plot raw attention matrices before any processing."""
         matrices = []
-        for i in range(len(attn_arr)):
-            layer_attns = []
-            for j in range(len(attn_arr[i])):
-                attn = (attn_arr[i][j]
-                        .cpu()
-                        .squeeze()
-                        .mean(axis=0)  # average over heads
-                        .to(torch.float16)
-                        .numpy())
+        for autoregressive_step in range(len(attn_arr)):
+            step_matrices = attn_arr[autoregressive_step]
+            layer_attns = aggregate_attention_heads(step_matrices)
+            aggregated_attn = aggregate_attention_layers(layer_attns)
             
-                # remove sink
-                attn = attn[1:, 1:]
-                layer_attns.append(attn)
-            matrices.append(aggregate_attention_layers(layer_attns))
-        title_prefix = "Token"
+            # remove sink
+            aggregated_attn = aggregated_attn[1:, 1:]
+            
+            matrices.append(aggregated_attn)
+        
+        matrices = [normalize_rows(matrix) for matrix in matrices]
     
         n = len(matrices)
         cols = math.ceil(math.sqrt(n))
@@ -187,7 +182,7 @@ class GraphFeatures:
         for i, matrix in enumerate(matrices):
             ax = axes[i]
             sns.heatmap(matrix, cmap="Reds", ax=ax, cbar=True)
-            ax.set_title(f"Raw {title_prefix} {i} Attention")
+            ax.set_title(f"Raw Token {i} Attention")
             ax.set_xlabel("Key Tokens")
             ax.set_ylabel("Query Tokens")
         
