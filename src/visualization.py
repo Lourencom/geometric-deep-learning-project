@@ -19,7 +19,7 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
     n_features = len(features)
     n_cols = 2
     n_rows = (n_features + 1) // 2
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 5*n_rows))
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15 + n_rows, 5*n_rows))
     axes = axes.flatten()
     
     linestyles = ['-', '--', ':', '-.']
@@ -43,6 +43,10 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
                    marker=marker,
                    markevery=5,
                    markersize=4)
+        
+        # Add vertical line at prompt boundary using passed prompt_length
+        #ax.axvline(x=prompt_length, color='red', linestyle='--', alpha=0.5, label='Prompt End')
+        # PROMPT ENDS AT 1 BASICALLY
         
         ax.set_xlabel("Tokens")
         ax.set_ylabel(feature)

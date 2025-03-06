@@ -2,10 +2,10 @@ from args import get_args
 from model import run_model
 from visualization import plot_features
 from prompts import Prompts
-from attention import load_attns
+from attention import load_attns, extract_attention_matrices_from_attention_data
 from graph_features import GraphFeatures
 import os
-
+from utils import store_answer
 def analyze_prompt(args, prompt_id, graph_strategies, features):
     """Run the analysis for a single prompt"""
     args.prompt_id = prompt_id
@@ -28,16 +28,20 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
     prompt_data = prompts.get_prompt(prompt_id=prompt_id)
     prompt_text = prompt_data['prompt']
 
+    print("Loading attention data...")
     # Load attention data and model answers
-    stored_prompt_attns = load_attns(
+    attention_data = load_attns(
         args.models,
         args.prompt_path, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots,
         analysis_type="tokenwise",
         )
     
+    stored_prompt_attns = extract_attention_matrices_from_attention_data(attention_data)
+    
+    print("Generating model answers...")
     # Load or generate model answers
     model_answers = {}
-    for model_tuple in args.models:
+    for i, model_tuple in enumerate(args.models):
         family, size, variant = model_tuple
         model_identifier = f"{family}_{size}_{variant}"
         answer_file = os.path.join(answers_dir, f"{model_identifier}.txt")
@@ -53,13 +57,11 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                     answer = content.strip()
                 model_answers[model_identifier] = answer
         else:
-            # If we don't have a stored answer, we need to generate one
-            _, answer, _, _, _, _ = run_model(
-                args.prompt_path, args.prompt_id, args.prompt_difficulty, args.prompt_category, args.prompt_n_shots,
-                model_tuple, answers_dir
-                )
+            answer = attention_data[i]['generated_text']
+            store_answer(model_tuple, answers_dir, answer, prompt_text, args.prompt_id)
             model_answers[model_identifier] = answer
 
+    print("Plotting raw matrices...")
     # Plot raw matrices once per model (not per strategy)
     if args.plot_matrices:
         raw_matrices_dir = os.path.join(matrices_dir, "raw")
@@ -88,6 +90,7 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                 mode="raw",
             )
     
+    print("Creating graph features for each model with different strategies...")
     # Create graph features for each model with different strategies    
     for strategy in graph_strategies:
         graph_features = {}
@@ -130,7 +133,7 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
             prompt_text,
             prompt_data,
             model_answers,
-            os.path.join(features_dir, f"{strategy_name}")
+            os.path.join(features_dir, f"{strategy_name}"),
         )
 
 
@@ -142,8 +145,12 @@ if __name__ == "__main__":
     graph_strategies = [
         {"mode": "top_k", "top_k": 3},
         {"mode": "top_k", "top_k": 5},
+        {"mode": "top_k", "top_k": 10},
+        {"mode": "top_k", "top_k": 20},
         {"mode": "threshold", "threshold": 0.1},
         {"mode": "threshold", "threshold": 0.2},
+        {"mode": "threshold", "threshold": 0.5},
+        {"mode": "threshold", "threshold": 0.7},
     ]
 
     features = [

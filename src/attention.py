@@ -204,7 +204,7 @@ def load_attns(models, prompt_path, prompt_id, prompt_difficulty, prompt_categor
         raise ValueError(f"Invalid analysis type: {analysis_type}")
 
 
-def load_attn_tokenwise(models, prompt_path,prompt_id, prompt_difficulty, prompt_category, prompt_n_shots, max_new_tokens=50):
+def load_attn_tokenwise(models, prompt_path, prompt_id, prompt_difficulty, prompt_category, prompt_n_shots, max_new_tokens=50):
     attn_dicts = []
     
     for model_tuple in models:
@@ -215,15 +215,22 @@ def load_attn_tokenwise(models, prompt_path,prompt_id, prompt_difficulty, prompt
             category=prompt_category,
             n_shots=prompt_n_shots
         )['prompt']
-        
 
         # Get tokenwise attentions
         model_family, model_size, model_variant = model_tuple
         model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
         attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=max_new_tokens)
 
-        # Extract just the attention matrices list from the dictionary
-        attn_matrices = attention_data['attention_matrices']
-        attn_dicts.append(attn_matrices)
+        # Return the full attention data dictionary instead of just attn matrices
+        attn_dicts.append(attention_data)
         
     return attn_dicts
+
+
+def extract_attention_matrices_from_attention_data(attention_data):
+    total_attention_matrices = []
+    for model_i in range(len(attention_data)):
+        model_data = attention_data[model_i]
+        attention_matrices = model_data['attention_matrices']
+        total_attention_matrices.append(attention_matrices)
+    return total_attention_matrices
