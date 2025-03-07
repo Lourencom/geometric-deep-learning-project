@@ -42,7 +42,7 @@ class Constants:
 
 
     # MISTRAL Models
-    MISTRAL_8B_INSTRUCT = "mistralai/Ministrall-8B-Instruct-2410"
+    MISTRAL_8B_INSTRUCT = "mistralai/Ministral-8B-Instruct-2410"
     MISTRAL_24B_INSTRUCT = "mistralai/Mistral-Small-24B-Instruct-2501"
 
 
