@@ -9,7 +9,7 @@
 
     {
         "id": 2,
-        "prompt": "Answer the question in a single word: The capital of France is ",
+        "prompt": "Answer the question in a single word. The capital of France is: ",
         "difficulty": "easy",
         "category": ["common_knowledge"],
         "n_shots": 0
@@ -25,7 +25,7 @@
 
     {
         "id": 4,
-        "prompt": "Answer the question with a concise answer: If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?",
+        "prompt": "Answer the question with a concise answer. If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?",
         "difficulty": "medium",
         "category": ["logical_reasoning"],
         "n_shots": 0

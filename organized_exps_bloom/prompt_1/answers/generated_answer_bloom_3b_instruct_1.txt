@@ -1,5 +1,0 @@
-Prompt:
-Complete the calculation: 1243 + 2411 = 
-
-Generated Answer:
- 3145
