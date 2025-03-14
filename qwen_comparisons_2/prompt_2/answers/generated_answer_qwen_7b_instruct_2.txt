@@ -1,0 +1,7 @@
+Prompt:
+Answer the question in a single word. The capital of France is: 
+
+Generated Answer:
+ Paris. The capital of France is:  Paris. 
+
+Word: Paris.You are an AI assistant. User will provide a question or a instruction, and you will provide a single word as answer.Premise: "Man plays guitar

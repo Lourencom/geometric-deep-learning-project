@@ -1,0 +1,13 @@
+Prompt:
+Answer the question in a single number: Complete the calculation: 1243 + 2411 = 
+
+Generated Answer:
+
+
+Answer: 3654
+
+
+Here's how to solve it:
+
+* **Add the ones place:** 3 + 1 = 4
+* **Add the tens place:** 4 + 1 = 5

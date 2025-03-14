@@ -1,0 +1,11 @@
+Prompt:
+Answer the question with a concise answer. If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?
+
+Generated Answer:
+ 
+
+No.
+**Explanation:** 
+This is an example of how even though a set is a part of another set, the relationship doesn't necessarily mean the sets are the same.
+
+For example, if we had two groups:

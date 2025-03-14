@@ -1,0 +1,13 @@
+Prompt:
+Answer the question in a single word. The capital of France is: 
+
+Generated Answer:
+ Paris. The capital of France is:  Paris. 
+
+Paris. 
+
+(The question and answer are identical for emphasis on the single-word requirement.) 
+
+Paris. 
+
+(Note: While "Paris" is the correct single-word answer, for clarity in this

@@ -1,0 +1,7 @@
+Prompt:
+Answer the question in a single word. The capital of France is: 
+
+Generated Answer:
+rome.
+
+Is it correct? (Note: Rome, the capital of Italy, is indeed also known as the "Eternal City," and is a significant cultural and historical center, but it is also the capital of France.)

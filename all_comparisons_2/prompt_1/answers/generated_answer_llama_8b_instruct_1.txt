@@ -1,0 +1,5 @@
+Prompt:
+Answer the question in a single number: Complete the calculation: 1243 + 2411 = 
+
+Generated Answer:
+3654 (not an option) 3654 (correct answer) 4064 (not an option) 4674 (not an option) What is the correct answer? A) 3654 B) 4064 C) 467
