@@ -1,6 +1,7 @@
 import subprocess
 import os
 import torch
+import json
 
 def get_git_root():
     try:
@@ -123,3 +124,47 @@ def load_attention_data(input_path, device=None):
         attention_data['prompt_tokens'] = attention_data['prompt_tokens'].to(device)
     
     return attention_data
+
+
+def store_features(features, graph_features, models, strategy_name, save_dir):
+    """Store features for each model in a JSON file."""
+    features_data = {}
+    
+    for model_tuple in models:
+        family, size, variant = model_tuple
+        model_identifier = f"{family}_{size}_{variant}"
+        
+        # Extract all features for this model
+        model_features = {}
+        for feature in features:
+            feature_values = graph_features[model_identifier].extract(feature)
+            # Convert numpy arrays to lists for JSON serialization
+            model_features[feature] = [float(x) if x is not None else None for x in feature_values]
+            
+        features_data[model_identifier] = model_features
+    
+    # Save to JSON file
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, f"features_{strategy_name}.json")
+    with open(save_path, 'w') as f:
+        json.dump(features_data, f)
+
+
+def store_prompt_and_responses(prompt_text, prompt_data, model_answers, save_dir, strategy_name):
+    """Store prompt and model responses in a JSON file."""
+    response_data = {
+        'prompt': {
+            'text': prompt_text,
+            'id': prompt_data['id'],
+            'difficulty': prompt_data['difficulty'],
+            'category': prompt_data['category'],
+            'n_shots': prompt_data['n_shots']
+        },
+        'responses': model_answers
+    }
+    
+    # Save to JSON file
+    os.makedirs(save_dir, exist_ok=True)
+    save_path = os.path.join(save_dir, f"responses_{strategy_name}.json")
+    with open(save_path, 'w') as f:
+        json.dump(response_data, f)

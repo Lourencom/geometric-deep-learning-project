@@ -1,11 +1,13 @@
 from args import get_args
 from model import run_model
 from visualization import plot_features
+from utils import store_answer, store_features, store_prompt_and_responses
+
 from prompts import Prompts
 from attention import load_attns, extract_attention_matrices_from_attention_data
 from graph_features import GraphFeatures
 import os
-from utils import store_answer
+
 def analyze_prompt(args, prompt_id, graph_strategies, features):
     """Run the analysis for a single prompt"""
     args.prompt_id = prompt_id
@@ -125,7 +127,19 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                     mode=analysis_type,
                 )
 
-        # Pass model answers to plot_features
+        # Store features for this strategy
+        store_features(features, graph_features, args.models, strategy_name, features_dir)
+        
+        # Store prompt and responses (but don't plot)
+        store_prompt_and_responses(
+            prompt_text, 
+            prompt_data, 
+            model_answers, 
+            features_dir, 
+            strategy_name
+        )
+        
+        # Plot features as before
         plot_features(
             features,
             graph_features,
@@ -153,7 +167,8 @@ if __name__ == "__main__":
         {"mode": "threshold", "threshold": 0.7},
     ]
 
-    features = [
+    features = []
+    """
         'clustering', 
         'average_shortest_path_length', 
         # 'forman_ricci', # division by 0, failed
@@ -169,7 +184,9 @@ if __name__ == "__main__":
         'pagerank',
         'eigenvector_centrality',
         'cycle_count',
+        
     ]
+    """
 
     for prompt_id in args.prompt_ids:
         analyze_prompt(args, prompt_id, graph_strategies, features)

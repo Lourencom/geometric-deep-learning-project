@@ -1,6 +1,7 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
 
+
 def plot_attention_matrix(attention_matrix, savepath=None):
     # Visualize each layer's attention matrix (averaged across heads) using Seaborn
     plt.figure(figsize=(8, 6))
@@ -19,7 +20,9 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
     n_features = len(features)
     n_cols = 2
     n_rows = (n_features + 1) // 2
-    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15 + n_rows, 5*n_rows))
+    
+    # Adjust figure size to be more compact
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4*n_rows))
     axes = axes.flatten()
     
     linestyles = ['-', '--', ':', '-.']
@@ -63,33 +66,32 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
     
     # Add prompt and answer information
     prompt_info = (
-        f"Prompt {prompt_data['id']}\n"
-        f"Difficulty: {prompt_data['difficulty']}\n"
-        f"Category: {prompt_data['category']}\n"
-        f"N-shots: {prompt_data['n_shots']}\n\n"
-        f"Prompt: {prompt_text[:200]}...\n\n"
+        f"Prompt {prompt_data['id']} | "
+        f"Difficulty: {prompt_data['difficulty']} | "
+        f"Category: {prompt_data['category']} | "
+        f"N-shots: {prompt_data['n_shots']}\n"
+        f"Prompt: {prompt_text[:100]}...\n"
     )
     
-    # Add model answers
-    answer_info = "Model Answers:\n"
+    # Add model answers more compactly
+    answer_info = "Answers: "
     for model_tuple in models:
         family, size, variant = model_tuple
         model_identifier = f"{family}_{size}_{variant}"
         answer = model_answers.get(model_identifier, "No answer available")
-        # Truncate long answers
-        if len(answer) > 200:
-            answer = answer[:200] + "..."
-        answer_info += f"\n{model_identifier}:\n{answer}\n"
+        if len(answer) > 100:
+            answer = answer[:100] + "..."
+        answer_info += f"\n{model_identifier}: {answer}"
     
-    # Combine prompt and answer information
     full_info = prompt_info + answer_info
     
-    # Add the information to the plot
-    fig.suptitle(full_info, y=1.02, fontsize=10, wrap=True)
+    # Adjust title position and spacing
+    fig.suptitle(full_info, y=1.0, fontsize=9, wrap=True)
     
-    # Adjust figure size to accommodate the text
-    plt.subplots_adjust(top=0.85)  # Adjust this value to fit your text
-    
+    # Tighter layout with less spacing
     plt.tight_layout()
+    # Adjust spacing after tight_layout to accommodate the title
+    plt.subplots_adjust(top=0.9)
+    
     plt.savefig(save_path + ".png", bbox_inches='tight')
     plt.close(fig)
