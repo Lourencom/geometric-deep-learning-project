@@ -6,7 +6,7 @@ from constants import get_model_and_tokenizer
 from model_utils import sample_next_token
 
 
-def aggregate_attention_layers(attn_matrices):
+def aggregate_attention_layers(attn_matrices, alpha = 0.8):
     """
     Aggregates a list of attention matrices.
 
@@ -34,7 +34,7 @@ def aggregate_attention_layers(attn_matrices):
             attn = np.where(attn < threshold, 0, attn)
         
         # Add the residual connection by summing with the identity matrix
-        attn_with_residual = attn + np.eye(attn.shape[0])
+        attn_with_residual = (1 - alpha) * attn + alpha * np.eye(attn.shape[0])
         
         # Normalize each row so that the attention weights sum to 1
         attn_norm = attn_with_residual / attn_with_residual.sum(axis=-1, keepdims=True)

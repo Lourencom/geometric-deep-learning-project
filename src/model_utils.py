@@ -15,7 +15,7 @@ def sample_next_token(current_ids, next_token_logits, temperature=1.0, top_p=0.9
     # Apply top-k filtering
     if top_k > 0:
         indices_to_remove = next_token_logits < torch.topk(next_token_logits, top_k)[0][..., -1, None]
-        next_token_logits[indices_to_remove] = -float('Inf')
+        next_token_logits[indices_to_remove] = -100000.0
     
     # Apply top-p (nucleus) filtering
     if top_p < 1.0:
@@ -27,9 +27,12 @@ def sample_next_token(current_ids, next_token_logits, temperature=1.0, top_p=0.9
         sorted_indices_to_remove[..., 0] = 0
         
         indices_to_remove = sorted_indices[sorted_indices_to_remove]
-        next_token_logits[0, indices_to_remove] = -float('Inf')
+        next_token_logits[0, indices_to_remove] = -100000.0
     
     # Sample from the filtered distribution
     probs = torch.softmax(next_token_logits, dim=-1)
+    
+    probs[torch.isnan(probs) | torch.isinf(probs)] = 0.0
+    probs[probs < 1e-10] = 1e-10
     next_token_id = torch.multinomial(probs, num_samples=1)
     return next_token_id

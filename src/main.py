@@ -1,3 +1,5 @@
+import os
+os.environ["TORCH_USE_CUDA_DSA"] = "1"
 from args import get_args
 from model import run_model
 from visualization import plot_features
@@ -6,7 +8,8 @@ from utils import store_answer, store_features, store_prompt_and_responses
 from prompts import Prompts
 from attention import load_attns, extract_attention_matrices_from_attention_data
 from graph_features import GraphFeatures
-import os
+
+
 
 def analyze_prompt(args, prompt_id, graph_strategies, features):
     """Run the analysis for a single prompt"""
@@ -167,7 +170,19 @@ if __name__ == "__main__":
         {"mode": "threshold", "threshold": 0.7},
     ]
 
-    features = []
+    features = ['clustering', 
+        'average_shortest_path_length',
+          'average_degree',
+        'connectivity',
+        'sparseness',
+        'hubs',
+        'clusters',
+        'communities',
+        #'fourier',
+        'commute_time_efficiency',
+        'pagerank',
+        'eigenvector_centrality',
+        'cycle_count' ]
     """
         'clustering', 
         'average_shortest_path_length', 

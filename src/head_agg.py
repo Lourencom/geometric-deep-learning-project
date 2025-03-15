@@ -9,7 +9,6 @@ os.environ["TORCH_USE_CUDA_DSA"] = "1"
 from model import get_model_and_tokenizer
 from attention import get_token_by_token_attention
 from prompts import Prompts
-from visualize_attention import create_attention_visualizations
 
 import numpy as np
 from skimage.util import view_as_blocks
@@ -38,7 +37,10 @@ def extract_blocks(a, blocksize, keep_as_view=False):
 
 def head_aggregate_single_token(attention_matrix, blocksize=4):
     """Aggregate attention heads for a single token's attention matrix"""
+
+
     n_tokens = attention_matrix[0].shape[-1]
+
     divisible_part = (n_tokens // blocksize) * blocksize
 
     aggregated_matrices = []
@@ -67,10 +69,14 @@ def head_aggregate_single_token(attention_matrix, blocksize=4):
         reconstructed_attention = np.vstack(rows)
 
         # make it causal 
-        reconstructed_attention = np.tril(reconstructed_attention, k=1)
+        reconstructed_attention = np.tril(reconstructed_attention, k=0)
 
+        final_attn = np.zeros((n_tokens, n_tokens))
+        final_attn[:divisible_part, :divisible_part] = reconstructed_attention
+        # the rest should just be the mean of the attention matrices per heads
+        final_attn[divisible_part:, divisible_part:] = np.mean(attention_matrix[j].cpu().to(torch.float16).numpy()[0,:], axis=0)[divisible_part:, divisible_part:]
         
-        aggregated_matrices.append(reconstructed_attention)
+        aggregated_matrices.append(final_attn)
 
     return aggregated_matrices
 
