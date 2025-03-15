@@ -6,19 +6,6 @@ from constants import get_model_and_tokenizer
 from model_utils import sample_next_token
 
 
-def aggregate_attention_heads(attn_matrices):
-    """
-    Aggregates attention heads across all layers.
-    """
-    aggregated_heads_list = []
-    for layer_i in range(len(attn_matrices)):
-        layer_attn = attn_matrices[layer_i].cpu().to(torch.float16).numpy()
-        layer_attn = layer_attn.squeeze(0)
-        layer_attn = layer_attn.mean(axis=0)
-        aggregated_heads_list.append(layer_attn)
-
-    return aggregated_heads_list
-
 def aggregate_attention_layers(attn_matrices):
     """
     Aggregates a list of attention matrices.

@@ -4,10 +4,11 @@ import torch
 import networkx as nx
 import matplotlib.pyplot as plt
 
-from attention import aggregate_attention_layers, aggregate_attention_heads
+from attention import aggregate_attention_layers
 import math
 import seaborn as sns
 from graph_metrics import *
+from head_agg import head_aggregate_single_token
 
 def create_graph_from_attn_matrix(attn, mode="top_k", top_k=10, threshold=0.5, **kwargs):
     """
@@ -92,7 +93,7 @@ class GraphFeatures:
         
         for autoregressive_step in range(len(attn_arr)): # for each token
             attn_step = attn_arr[autoregressive_step]
-            layer_attns = aggregate_attention_heads(attn_step)
+            layer_attns = head_aggregate_single_token(attn_step)
             aggregated_attn = aggregate_attention_layers(layer_attns)
             
             if remove_sink:
@@ -159,7 +160,7 @@ class GraphFeatures:
         matrices = []
         for autoregressive_step in range(len(attn_arr)):
             step_matrices = attn_arr[autoregressive_step]
-            layer_attns = aggregate_attention_heads(step_matrices)
+            layer_attns = head_aggregate_single_token(step_matrices)
             aggregated_attn = aggregate_attention_layers(layer_attns)
             
             # remove sink
