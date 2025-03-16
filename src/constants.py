@@ -80,12 +80,16 @@ model_mapping = {
 }
 
 
-def get_model_and_tokenizer(family, size, variant):
+def get_model_and_tokenizer(family, size, variant, dtype=torch.bfloat16, load_in_8bit=False, load_in_4bit=False, attn_implementation="eager"):
     """
     family: str, one of ["llama", "bloom", "gemma", "qwen"]
     size: str, eg. ["1b", "8b", "70b"] for llama,
           or ["560m", "1b1", "1b7", "3b", "7b1"] for bloom
     variant: str, either "causal" or "instruct"
+    dtype: torch.dtype, precision to use (default: bfloat16)
+    load_in_8bit: bool, whether to use 8-bit quantization
+    load_in_4bit: bool, whether to use 4-bit quantization
+    attn_implementation: str, attention implementation to use
     """
     family = family.lower()
     size = size.lower()
@@ -99,11 +103,25 @@ def get_model_and_tokenizer(family, size, variant):
         raise ValueError(f"Invalid model variant: {variant} for family: {family}, size: {size}. Options are {list(model_mapping[family][size].keys())}")
 
     model_id = model_mapping[family][size][variant]
+
     
+    model_kwargs = {
+        "torch_dtype": dtype,
+        "device_map": "auto",
+    }
+    
+    
+    # Load the model with appropriate configuration
     model = transformers.AutoModelForCausalLM.from_pretrained(
         model_id,
-        torch_dtype=torch.bfloat16,
-        device_map="auto"
+        **model_kwargs
     )
+    
+    # Load tokenizer
     tokenizer = AutoTokenizer.from_pretrained(model_id)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    
     return model, tokenizer
+
+

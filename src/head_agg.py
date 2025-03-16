@@ -2,16 +2,16 @@ import os
 import matplotlib.pyplot as plt
 import torch
 import pickle
+import transformers
+from transformers import AutoTokenizer
 from pathlib import Path
-os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,3,7"
-os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
-os.environ["TORCH_USE_CUDA_DSA"] = "1"
-from model import get_model_and_tokenizer
+#os.environ["CUDA_VISIBLE_DEVICES"] = "0,1,2,3,4,5,6,7"
+#os.environ["CUDA_LAUNCH_BLOCKING"] = "1"
+#os.environ["TORCH_USE_CUDA_DSA"] = "1"
 from attention import get_token_by_token_attention
 from prompts import Prompts
 
 import numpy as np
-from skimage.util import view_as_blocks
 
 import scipy.linalg
 
@@ -96,11 +96,16 @@ if __name__ == "__main__":
     prompt = Prompts(prompts_path).get_prompt(prompt_id)['prompt']
 
 
-    model, tokenizer = get_model_and_tokenizer(
-        "llama",
-        "1b",
-        "instruct"
-    )
+    model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
+    model_kwargs = {"torch_dtype": torch.float16, "device_map": "auto"}
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+            model_id,
+            **model_kwargs
+        )
+        
+    tokenizer = AutoTokenizer.from_pretrained(model_id)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
 
     # Generate tokens and collect attention matrices
     save_dir = Path("saved_attention_data")
@@ -109,7 +114,7 @@ if __name__ == "__main__":
     pickle_path = save_dir / f"prompt_{prompt_id}_attention.pkl"
 
     # Check if attention data already exists
-    if save_path.exists():
+    if None and os.path.exists(save_path):
         print(f"Loading existing attention data from {save_path}")
         outputs = torch.load(save_path)
     else:

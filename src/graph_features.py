@@ -89,7 +89,7 @@ class GraphFeatures:
 
     def create_tokenwise_graphs(self, attn_arr, **kwargs):
         token_wise_attns = []
-        remove_sink = kwargs.get("remove_attention_sink", True)
+        remove_sink = False #kwargs.get("remove_attention_sink", True)
         
         for autoregressive_step in range(len(attn_arr)): # for each token
             attn_step = attn_arr[autoregressive_step]
