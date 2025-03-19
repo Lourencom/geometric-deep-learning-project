@@ -89,6 +89,65 @@ def head_aggregation(attention_matrices, blocksize=4):
     return aggregated_matrices
             
 
+def compute_row_entropy(row):
+    """Compute entropy of a single row of attention weights."""
+    # Add small epsilon to avoid log(0)
+    row = row.astype(np.float32)
+    epsilon = 1e-10
+    return -np.sum(row * np.log(row + epsilon))
+def head_agg_rowwise_entropy(attention_matrices, alpha=0.5):
+    """
+    Aggregate attention heads based on row-wise entropy.
+    
+    Args:
+        attention_matrices: List of attention matrices [batch_size, num_heads, seq_len, seq_len]
+        alpha: Float between 0 and 1 controlling entropy selection:
+              0.0 = lowest entropy
+              0.5 = median entropy (default)
+              1.0 = highest entropy
+        
+    Returns:
+        Aggregated attention matrix [seq_len, seq_len]
+    """
+    # Get dimensions
+    batch_size, num_heads, seq_len, _ = attention_matrices[0].shape
+    
+    # Initialize output matrix
+    aggregated_matrices = []
+    
+    for layer_attn in attention_matrices:
+        layer_attn = layer_attn.squeeze(0) # remove batch dimension, now [num_heads, seq_len, seq_len]
+
+        aggregated_layer_matrix = np.zeros((seq_len, seq_len))
+        # For each row position
+        for row_idx in range(seq_len):
+            # Get all attention weights for this row across all heads
+            row_attentions = []
+
+            for head_idx in range(num_heads):
+                layer_row_attn = layer_attn[head_idx, row_idx, :].to(torch.float16).cpu().detach().numpy()
+                row_attentions.append(layer_row_attn)
+                    
+            # Compute entropy for each row
+            entropies = np.array([compute_row_entropy(row) for row in row_attentions])
+            
+            # Select head based on alpha parameter
+            sorted_indices = np.argsort(entropies)
+            # will choose median entropy if alpha = 0.5, highest entropy if alpha = 1.0, lowest entropy if alpha = 0.0
+            selected_idx = sorted_indices[int(alpha * (len(sorted_indices) - 1))]
+            
+            # Use the selected attention pattern
+            aggregated_layer_matrix[row_idx, :] = row_attentions[selected_idx]
+            
+            # Make it causal (only attend to previous tokens)
+            #aggregated_matrix = np.tril(aggregated_matrix, k=0)
+
+        aggregated_matrices.append(aggregated_layer_matrix)
+    
+    return aggregated_matrices
+
+from constants import get_model_and_tokenizer
+
 if __name__ == "__main__":
     prompts_path = "data/prompts.json"
 
@@ -96,16 +155,7 @@ if __name__ == "__main__":
     prompt = Prompts(prompts_path).get_prompt(prompt_id)['prompt']
 
 
-    model_id = "meta-llama/Meta-Llama-3-8B-Instruct"
-    model_kwargs = {"torch_dtype": torch.float16, "device_map": "auto"}
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-            model_id,
-            **model_kwargs
-        )
-        
-    tokenizer = AutoTokenizer.from_pretrained(model_id)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    model, tokenizer = get_model_and_tokenizer(family="llama", size="8b", variant="instruct", )
 
     # Generate tokens and collect attention matrices
     save_dir = Path("saved_attention_data")
@@ -114,7 +164,7 @@ if __name__ == "__main__":
     pickle_path = save_dir / f"prompt_{prompt_id}_attention.pkl"
 
     # Check if attention data already exists
-    if None and os.path.exists(save_path):
+    if os.path.exists(save_path):
         print(f"Loading existing attention data from {save_path}")
         outputs = torch.load(save_path)
     else:
@@ -138,4 +188,33 @@ if __name__ == "__main__":
 
     attention_matrices = outputs['attention_matrices']
 
-    head_aggregation(attention_matrices)
+    # head_aggregation(attention_matrices)
+    print(f"Aggregating attention row-wise entropy")
+    # Test the new row-wise entropy aggregation on a single token
+    aggregated_matrices = {
+        "Alpha=0.0": head_agg_rowwise_entropy(attention_matrices[0], alpha=0.0),
+        "Alpha=0.25": head_agg_rowwise_entropy(attention_matrices[0], alpha=0.25),
+        "Alpha=0.5": head_agg_rowwise_entropy(attention_matrices[0], alpha=0.5),
+        "Alpha=0.75": head_agg_rowwise_entropy(attention_matrices[0], alpha=0.75),
+        "Alpha=1.0": head_agg_rowwise_entropy(attention_matrices[0], alpha=1.0),
+    }
+
+    print(f"Done aggregating attention row-wise entropy")
+
+    # plot them all
+    import seaborn as sns
+    import matplotlib.pyplot as plt
+    
+    fig, axes = plt.subplots(2, 3, figsize=(15, 10))
+    axes = axes.ravel()
+    
+    for idx, (title, attn) in enumerate(aggregated_matrices.items()):
+        sns.heatmap(attn[0], cmap="Reds", ax=axes[idx])
+        axes[idx].set_title(title)
+    
+    # Remove the empty subplot
+    fig.delaxes(axes[5])
+    
+    plt.tight_layout()
+    plt.savefig(os.path.join(output_dir, f"prompt_{prompt_id}_rowwise_entropy_comparison.png"))
+    plt.close()
