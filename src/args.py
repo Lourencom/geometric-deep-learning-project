@@ -18,7 +18,7 @@ def get_args():
         "--models",
         type=parse_model_tuple,
         nargs="+",
-        default=[("bloom", "560m", "instruct"), ("bloom", "1b7", "instruct")],
+        default=[("llama", "1b", "instruct"), ("llama", "8b", "instruct")],
         help=(
             "List of models to analyze, provided as tuples in the format 'family,size,variant'. "
             "For example: 'llama,small,causal' 'bloom,1b7,instruct'"
