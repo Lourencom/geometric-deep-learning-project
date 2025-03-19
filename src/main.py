@@ -81,7 +81,9 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                 stored_prompt_attns[i],
                 remove_attention_sink=True,
                 analysis_type=analysis_type,
-                plot_raw=True
+                plot_raw=True,
+                aggregate_heads_fn="entropy",
+                entropy_alpha=1.0
             )
 
             matrix_filename = os.path.join(
@@ -160,29 +162,31 @@ if __name__ == "__main__":
     os.makedirs(args.attn_dir, exist_ok=True)
 
     graph_strategies = [
-        {"mode": "top_k", "top_k": 3},
-        {"mode": "top_k", "top_k": 5},
-        {"mode": "top_k", "top_k": 10},
+        #{"mode": "top_k", "top_k": 3},
+        #{"mode": "top_k", "top_k": 5},
+        #{"mode": "top_k", "top_k": 10},
         {"mode": "top_k", "top_k": 20},
-        {"mode": "threshold", "threshold": 0.1},
-        {"mode": "threshold", "threshold": 0.2},
-        {"mode": "threshold", "threshold": 0.5},
-        {"mode": "threshold", "threshold": 0.7},
+        #{"mode": "threshold", "threshold": 0.1},
+        #{"mode": "threshold", "threshold": 0.2},
+        #{"mode": "threshold", "threshold": 0.5},
+       # {"mode": "threshold", "threshold": 0.7},
     ]
 
-    features = ['clustering', 
+    features = [
+        'clustering', 
         'average_shortest_path_length',
-          'average_degree',
+        'average_degree',
         'connectivity',
         'sparseness',
         'hubs',
         'clusters',
         'communities',
-        #'fourier',
+        'fourier',
         'commute_time_efficiency',
         'pagerank',
         'eigenvector_centrality',
-        'cycle_count' ]
+        'cycle_count'
+        ]
     """
         'clustering', 
         'average_shortest_path_length', 

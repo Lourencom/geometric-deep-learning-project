@@ -8,7 +8,7 @@ from attention import aggregate_attention_layers
 import math
 import seaborn as sns
 from graph_metrics import *
-from head_agg import head_aggregate_single_token
+from head_agg import head_aggregate_single_token, head_agg_rowwise_entropy
 
 def create_graph_from_attn_matrix(attn, mode="top_k", top_k=10, threshold=0.5, **kwargs):
     """
@@ -91,9 +91,19 @@ class GraphFeatures:
         token_wise_attns = []
         remove_sink = False #kwargs.get("remove_attention_sink", True)
         
+        aggregate_heads_fn = kwargs.get("aggregate_heads_fn", "average")
+        assert aggregate_heads_fn in ["average", "entropy"]
+
+
         for autoregressive_step in range(len(attn_arr)): # for each token
             attn_step = attn_arr[autoregressive_step]
-            layer_attns = head_aggregate_single_token(attn_step)
+
+            if aggregate_heads_fn == "average":
+                layer_attns = head_aggregate_single_token(attn_step)
+            elif aggregate_heads_fn == "entropy":
+                entropy_alpha = kwargs.get("entropy_alpha", 0.5)
+                layer_attns = head_agg_rowwise_entropy(attn_step, entropy_alpha)
+            
             aggregated_attn = aggregate_attention_layers(layer_attns)
             
             if remove_sink:
@@ -160,11 +170,16 @@ class GraphFeatures:
         matrices = []
         for autoregressive_step in range(len(attn_arr)):
             step_matrices = attn_arr[autoregressive_step]
-            layer_attns = head_aggregate_single_token(step_matrices)
+            #layer_attns = head_aggregate_single_token(step_matrices)
+            layer_attns = head_agg_rowwise_entropy(step_matrices, 0.75)
             aggregated_attn = aggregate_attention_layers(layer_attns)
             
             # remove sink
             aggregated_attn = aggregated_attn[1:, 1:]
+
+            # remove self-attention
+            for i in range(aggregated_attn.shape[0]):
+                aggregated_attn[i, i] = 0
             
             matrices.append(aggregated_attn)
         

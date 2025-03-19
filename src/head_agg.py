@@ -48,7 +48,7 @@ def head_aggregate_single_token(attention_matrix, blocksize=4):
         patchable_part = attention_matrix[j][0, :, :divisible_part, :divisible_part]
         # create patches of size 4x4 using numpy
         patches = extract_blocks(patchable_part, (blocksize, blocksize))
-        print(patches.shape)
+        #print(patches.shape)
         
         # Convert to numpy if it's a torch tensor
         if isinstance(patches, torch.Tensor):

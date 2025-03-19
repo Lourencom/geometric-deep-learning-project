@@ -1,0 +1,1 @@
+{"prompt": {"text": "Answer the question in a single number: Complete the calculation: 1243 + 2411 = ", "id": 1, "difficulty": "medium", "category": ["arithmetic"], "n_shots": 0}, "responses": {"gemma_2b_instruct": "\n\nSolution: \n1243 + 2411 = 3654 \nAnswer: 3654\n\n", "gemma_9b_instruct": "\n\nProvide the full solution:\n\n1243 + 2411 = **3654** \n\n"}}
