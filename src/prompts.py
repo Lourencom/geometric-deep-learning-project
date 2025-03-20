@@ -49,3 +49,9 @@ def filter_prompts(prompts, prompt_difficulty, prompt_category, prompt_n_shots, 
     if model_size is not None:
         prompts = [p for p in prompts if model_size in p]
     return prompts
+
+
+def add_system_instruction(question_prompt):
+    system_instruction = "Answer the following question with a concise, one-word or one-number response. Do not include any additional commentary."
+    prompt = f"{system_instruction}\n\n{question_prompt}"
+    return prompt

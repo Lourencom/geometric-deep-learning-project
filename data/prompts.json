@@ -1,7 +1,7 @@
 [
     {
         "id": 1,
-        "prompt": "Example 1: Complete the calculation: 2 + 2 = 4.\nExample 2: Complete the calculation: 1 + 1 = 2.\nQuestion: Complete the calculation: 1243 + 2411 = ",
+        "prompt": "Answer the following question with a concise, one-number response. Example 1: Complete the calculation: 2 + 2 = 4.\nExample 2: Complete the calculation: 1 + 1 = 2.\nQuestion: Complete the calculation: 1243 + 2411 = ",
         "difficulty": "medium",
         "category": ["arithmetic"],
         "n_shots": 2,
@@ -10,7 +10,7 @@
 
     {
         "id": 2,
-        "prompt": "Example 1: The capital of Portugal is: Lisbon.\nExample 2: The capital of Serbia is: Belgrade.\nQuestion: The capital of France is: ",
+        "prompt": "Answer the following question with a concise, one-word response. Example 1: The capital of Portugal is: Lisbon.\nExample 2: The capital of Serbia is: Belgrade.\nQuestion: The capital of France is: ",
         "difficulty": "easy",
         "category": ["common_knowledge"],
         "n_shots": 0,
@@ -28,7 +28,7 @@
 
     {
         "id": 4,
-        "prompt": "Question: If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?",
+        "prompt": "Answer the following question with a concise, one-word response. Question: If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?",
         "difficulty": "medium",
         "category": ["logical_reasoning"],
         "n_shots": 0,

@@ -4,11 +4,13 @@ from args import get_args
 from model import run_model
 from visualization import plot_features, plot_responses
 from utils import store_answer, store_features, store_prompt_and_responses
+from validate_answer import get_first_sentence
 
 from prompts import Prompts
 from attention import load_attns, extract_attention_matrices_from_attention_data
 from graph_features import GraphFeatures
 
+from prompts import add_system_instruction
 
 
 def analyze_prompt(args, prompt_id, graph_strategies, features):
@@ -31,7 +33,9 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
     # Load prompt text and metadata
     prompts = Prompts(args.prompt_path)
     prompt_data = prompts.get_prompt(prompt_id=prompt_id)
-    prompt_text = prompt_data['prompt']
+    prompt_text_raw = prompt_data['prompt']
+    prompt_text = prompt_text_raw #add_system_instruction(prompt_text_raw)
+
 
     print("Loading attention data...")
     # Load attention data and model answers

@@ -86,6 +86,7 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
     This function performs token-by-token generation and captures the attention matrices
     at each step, preserving the full attention state (all heads, all layers) for each
     token generation step.
+    Stops after generating the first complete sentence.
     
     Args:
         model: The HuggingFace model to use for generation
@@ -153,6 +154,11 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
                 
             # Append the new token to the sequence
             current_ids = torch.cat([current_ids, next_token_id], dim=1)
+            
+            # Check if we've completed a sentence
+            current_text = tokenizer.decode(current_ids[0][input_length:], skip_special_tokens=True)
+            if any(end_of_sentence in current_text for end_of_sentence in ['.', '!', '?']):
+                break
     
     # Decode the full generated text
     full_text = tokenizer.decode(current_ids[0], skip_special_tokens=True)
