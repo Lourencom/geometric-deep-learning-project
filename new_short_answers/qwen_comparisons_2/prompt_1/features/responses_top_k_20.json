@@ -1,0 +1,1 @@
+{"prompt": {"text": "Answer the following question with a concise, one-number response. Example 1: Complete the calculation: 2 + 2 = 4.\nQuestion: Complete the calculation: 1243 + 2411 = ", "id": 1, "difficulty": "medium", "category": ["arithmetic"], "n_shots": 1}, "responses": {"qwen_1.5b_instruct": "3654.", "qwen_3b_instruct": "3654.", "qwen_7b_instruct": "3654.\n"}}
