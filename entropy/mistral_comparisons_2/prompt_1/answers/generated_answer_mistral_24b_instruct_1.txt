@@ -1,0 +1,14 @@
+Prompt:
+Answer the question in a single number: Complete the calculation: 1243 + 2411 = 
+
+Generated Answer:
+ ?
+
+To find the sum of 1243 and 2411, you add the numbers together:
+
+1243
++ 2411
+------
+ 3654
+
+So, the sum is 

@@ -1,0 +1,7 @@
+Prompt:
+Answer the question in a single word. The capital of France is: 
+
+Generated Answer:
+ Paris. **Capital**. The capital of France is **Paris**. 
+
+Paris is the largest city in France and serves as the country's political, cultural, and economic center. It is known for its famous landmarks such as the Eiffel

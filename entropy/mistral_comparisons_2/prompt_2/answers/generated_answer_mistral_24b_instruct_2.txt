@@ -1,0 +1,5 @@
+Prompt:
+Answer the question in a single word. The capital of France is: 
+
+Generated Answer:
+ _________

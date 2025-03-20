@@ -1,0 +1,6 @@
+Prompt:
+Answer the question in a single number: Complete the calculation: 1243 + 2411 = 
+
+Generated Answer:
+3654 / 2
+1243 + 2411 = 3654. Then, 3654 / 2 = 1827. The answer is the number 18

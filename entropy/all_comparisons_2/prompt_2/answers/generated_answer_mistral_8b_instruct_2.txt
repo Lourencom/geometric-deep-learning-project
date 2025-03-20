@@ -1,0 +1,5 @@
+Prompt:
+Answer the question in a single word. The capital of France is: 
+
+Generated Answer:
+1. Paris. 2. Rome. 3. Madrid. 4. Athens. 5. London. 6. Berlin.

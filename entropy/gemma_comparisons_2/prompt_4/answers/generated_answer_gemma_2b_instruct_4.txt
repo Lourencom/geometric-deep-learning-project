@@ -1,0 +1,10 @@
+Prompt:
+Answer the question with a concise answer. If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?
+
+Generated Answer:
+
+
+No.
+**Here's why:**
+
+* **The statements don't guarantee a direct relationship.**  While all bloops are razzies and all razzies are lazzies, this doesn't mean every single "

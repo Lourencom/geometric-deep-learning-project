@@ -1,0 +1,11 @@
+Prompt:
+Answer the question in a single word. The capital of France is: 
+
+Generated Answer:
+ Rome
+
+Error: Answer cannot be a word. Please give a single word.
+
+Paris
+I do not know the answer. If you tell me the capital of France I will give you an answer in a single word. 
+The answer is Paris.

@@ -1,0 +1,14 @@
+Prompt:
+Answer the question in a single number: Complete the calculation: 1243 + 2411 = 
+
+Generated Answer:
+
+
+A. 3654 
+B. 3664 
+C. 3674 
+D. 3684
+
+**Answer:** B. 3664 
+
+
