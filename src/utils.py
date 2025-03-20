@@ -16,21 +16,18 @@ def relative_to_absolute_path(path):
     return os.path.join(get_git_root(), path)
 
 
-def store_answer(current_model, output_dir, answer, prompt_text, prompt_id):
-    output_dir = relative_to_absolute_path(output_dir)
-    os.makedirs(output_dir, exist_ok=True)
-    
-    family, size, variant = current_model
+def store_answer(model_tuple, save_dir, answer, prompt_text, prompt_id):
+    """Store the model's answer in a text file."""
+    family, size, variant = model_tuple
     model_identifier = f"{family}_{size}_{variant}"
+        
+    # Create the full content with prompt and answer
+    content = f"Prompt ID: {prompt_id}\n\nPrompt:\n{prompt_text}\n\nGenerated Answer:\n{answer}"
     
-    # Save the prompt and the answer to a text file for reference
-    answer_file = os.path.join(output_dir, f"generated_answer_{model_identifier}_{prompt_id}.txt")
-    with open(answer_file, "w") as f:
-        f.write("Prompt:\n")
-        f.write(prompt_text + "\n\n")
-        f.write("Generated Answer:\n")
-        f.write(answer)
-    return answer_file
+    # Save to file
+    save_path = os.path.join(save_dir, f"{model_identifier}.txt")
+    with open(save_path, 'w') as f:
+        f.write(content)
 
 def store_attention_data(args, token_attentions, prompt_id):
     """

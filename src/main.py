@@ -2,7 +2,7 @@ import os
 os.environ["TORCH_USE_CUDA_DSA"] = "1"
 from args import get_args
 from model import run_model
-from visualization import plot_features
+from visualization import plot_features, plot_responses
 from utils import store_answer, store_features, store_prompt_and_responses
 
 from prompts import Prompts
@@ -118,6 +118,8 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                 analysis_type=analysis_type,
                 plot_raw=True,
                 save_path=os.path.join(strategy_matrices_dir, f"{model_identifier}_{analysis_type}_raw"),
+                aggregate_heads_fn="entropy",
+                entropy_alpha=1.0,
                 **strategy
             )
 
@@ -144,7 +146,14 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
             strategy_name
         )
         
-        # Plot features as before
+        # Plot responses and features separately
+        plot_responses(
+            prompt_text,
+            prompt_data,
+            model_answers,
+            os.path.join(features_dir, f"{strategy_name}")
+        )
+        
         plot_features(
             features,
             graph_features,
@@ -152,7 +161,7 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
             prompt_text,
             prompt_data,
             model_answers,
-            os.path.join(features_dir, f"{strategy_name}"),
+            os.path.join(features_dir, f"{strategy_name}")
         )
 
 

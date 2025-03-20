@@ -1,5 +1,6 @@
 import seaborn as sns
 import matplotlib.pyplot as plt
+from validate_answer import evaluate_answer
 
 
 def plot_attention_matrix(attention_matrix, savepath=None):
@@ -12,6 +13,46 @@ def plot_attention_matrix(attention_matrix, savepath=None):
     if savepath:
         plt.savefig(savepath + ".png")
     plt.close()
+
+
+def plot_responses(prompt_text, prompt_data, model_answers, save_path):
+    """Plot model responses in a separate figure."""
+    fig = plt.figure(figsize=(12, 6))
+    
+    # Add prompt and answer information
+    prompt_info = (
+        f"Prompt {prompt_data['id']} | "
+        f"Difficulty: {prompt_data['difficulty']} | "
+        f"Category: {prompt_data['category']} | "
+        f"N-shots: {prompt_data['n_shots']}\n"
+        f"Prompt: {prompt_text[:100]}...\n"
+    )
+    
+    # Add model answers with validation
+    answer_info = "Answers: "
+    for model_identifier, answer in model_answers.items():
+        is_correct = evaluate_answer(answer, prompt_data['target_answer'])
+        status = "✓" if is_correct else "✗"
+        if len(answer) > 100:
+            answer = answer[:100] + "..."
+        answer_info += f"\n{model_identifier} [{status}]: {answer}"
+    
+    full_info = prompt_info + answer_info
+    
+    # Add text to figure
+    plt.text(0.5, 0.5, full_info, 
+             horizontalalignment='center',
+             verticalalignment='center',
+             transform=plt.gca().transAxes,
+             fontsize=10,
+             wrap=True)
+    
+    # Remove axes
+    plt.axis('off')
+    
+    # Save figure
+    plt.savefig(save_path + "_responses.png", bbox_inches='tight')
+    plt.close(fig)
 
 
 def plot_features(features, graph_features, models, prompt_text, prompt_data, model_answers, save_path):
@@ -47,10 +88,6 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
                    markevery=5,
                    markersize=4)
         
-        # Add vertical line at prompt boundary using passed prompt_length
-        #ax.axvline(x=prompt_length, color='red', linestyle='--', alpha=0.5, label='Prompt End')
-        # PROMPT ENDS AT 1 BASICALLY
-        
         ax.set_xlabel("Tokens")
         ax.set_ylabel(feature)
         ax.set_title(feature)
@@ -64,34 +101,13 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
     handles, labels = axes[0].get_legend_handles_labels()
     fig.legend(handles, labels, loc='center right', bbox_to_anchor=(0.98, 0.5))
     
-    # Add prompt and answer information
-    prompt_info = (
-        f"Prompt {prompt_data['id']} | "
-        f"Difficulty: {prompt_data['difficulty']} | "
-        f"Category: {prompt_data['category']} | "
-        f"N-shots: {prompt_data['n_shots']}\n"
-        f"Prompt: {prompt_text[:100]}...\n"
-    )
-    
-    # Add model answers more compactly
-    answer_info = "Answers: "
-    for model_tuple in models:
-        family, size, variant = model_tuple
-        model_identifier = f"{family}_{size}_{variant}"
-        answer = model_answers.get(model_identifier, "No answer available")
-        if len(answer) > 100:
-            answer = answer[:100] + "..."
-        answer_info += f"\n{model_identifier}: {answer}"
-    
-    full_info = prompt_info + answer_info
-    
-    # Adjust title position and spacing
-    fig.suptitle(full_info, y=1.0, fontsize=9, wrap=True)
+    # Add prompt as title
+    fig.suptitle(prompt_text[:100] + "...", y=1.0, fontsize=9, wrap=True)
     
     # Tighter layout with less spacing
     plt.tight_layout()
     # Adjust spacing after tight_layout to accommodate the title
     plt.subplots_adjust(top=0.9)
     
-    plt.savefig(save_path + ".png", bbox_inches='tight')
+    plt.savefig(save_path + "_features.png", bbox_inches='tight')
     plt.close(fig)
