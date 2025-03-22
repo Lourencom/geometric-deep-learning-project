@@ -27,69 +27,35 @@ with open(os.path.join(get_git_root(), "entropy/all_comparisons_2/prompt_1/featu
     results = json.load(f)
 
 
-models_by_families = {'mistral': ['8b', '24b'], 'qwen': ['1.5b', '3b', '7b'], 'llama': ['1b', '8b'], 'gemma': ['2b', '9b', '27b']}
+models_by_families = {'mistral': ['mistral_8b_instruct', 'mistral_24b_instruct'], 'qwen': ['qwen_1.5b_instruct', 'qwen_3b_instruct', 'qwen_7b_instruct'], 'llama': ['llama_1b_instruct', 'llama_8b_instruct'], 'gemma': ['gemma_2b_instruct', 'gemma_9b_instruct', 'gemma_27b_instruct']}
 
 features_by_families_by_models = {feature_name: {family: {model: [] for model in models_by_families[family]} for family in models_by_families.keys()} for feature_name in feature_names}
 
+fig, axs = plt.subplots(figsize=(20, 20), nrows=3, ncols=1)
+for i, feature in enumerate(feature_names):
 
-# Populate the data structure
-for model_name, features in results.items():
-    family = get_model_family_from_name(model_name)
-    size = model_name.split('_')[1]
-    
-    for feature_name in feature_names:
-        if feature_name in features:
-            features_by_families_by_models[feature_name][family][size].append(features[feature_name])
+    # Sample data
+    groups = list(models_by_families.keys())
+    samples_per_group = [[f"{' '.join(model.split('_')[:-1])}" for model in models_by_families[family]] for family in groups]
 
-# Plot each feature
-for feature in feature_names:
-    # Create a list to store the data for the DataFrame
-    data = []
-    
-    # Extract median values for each model and family
-    for family, size_data in features_by_families_by_models[feature].items():
-        for size, values in size_data.items():
-            if values:  # Only include if we have data
-                data.append({
-                    'Family': family,
-                    'Model Size': size,
-                    'Model': f"{family}_{size}",
-                    'Value': np.median(values)
-                })
-    
-    # Create DataFrame for seaborn
-    df = pd.DataFrame(data)
-    
-    # Set aesthetic parameters
-    sns.set(style="whitegrid")
-    plt.figure(figsize=(12, 6))
-    
-    # Create the plot
-    # Sort by model size for consistent ordering
-    order = sorted(df['Model'].unique(), key=lambda x: (x.split('_')[0], x.split('_')[1]))
-    
-    # Create the plot with seaborn
-    ax = sns.barplot(
-        data=df,
-        x='Family',
-        y='Value',
-        hue='Model Size',
-        palette='viridis',
-        errorbar=None
-    )
-    
-    # Customize the plot
-    ax.set_title(f'{feature} by Model Family and Size')
-    ax.set_ylabel(feature.capitalize())
-    ax.set_xlabel('Model Family')
-    
-    # Add value labels on top of bars
-    for container in ax.containers:
-        ax.bar_label(container, fmt='%.3f', fontsize=8)
-    
-    # Adjust legend
-    plt.legend(title='Model Size', bbox_to_anchor=(1.05, 1), loc='upper left')
-    
-    plt.tight_layout()
-    plt.savefig(os.path.join(out_dir, f'{feature}_distribution_seaborn.png'))
-    plt.close()
+    # Flatten sample names and assign random heights
+    samples = [s for sublist in samples_per_group for s in sublist]
+    heights = [np.median(results[model.replace(" ", "_")+"_instruct"][feature]) for model in samples]
+
+    # Create a DataFrame
+    df = pd.DataFrame({"Sample": samples, "Height": heights})
+    df["Group"] = np.repeat(groups, [len(g) for g in samples_per_group])
+
+    # Create bar plot
+    ax = axs[i]
+    sns.barplot(data=df, x="Sample", y="Height", hue="Group", dodge=False, palette="muted", ax=ax)
+
+    # Improve layout
+    plt.xticks(rotation=45, ha="right")
+    ax.set_xlabel("")
+    ax.set_ylabel("Value")
+    ax.set_title(feature)
+
+plt.suptitle("Feature distribution for different models and features")
+plt.show()
+fig.savefig(os.path.join(out_dir, f"feature_distributions.png"), dpi=300)
