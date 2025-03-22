@@ -152,7 +152,7 @@ if __name__ == "__main__":
         analysis_type="tokenwise",
         )[0]['attention_matrices']
     
-    out_dir = os.path.join(get_git_root(), "results/high_freq_visuals")
+    out_dir = os.path.join(get_git_root(), "high_freq_visuals")
 
     plot_fig = False
     all_per_head_energies = []
