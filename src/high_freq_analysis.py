@@ -1,8 +1,15 @@
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 from head_agg import compute_row_entropy
 from attention import load_attns
 import torch
+import git
+
+def get_git_root():
+    repo = git.Repo('.', search_parent_directories=True)
+    return repo.git.rev_parse("--show-toplevel")
+
 def layerwise_entropy(layer_attn, alpha=0.5):
     num_heads, seq_len, _ = layer_attn.shape
 
@@ -85,8 +92,8 @@ def analyze_attention_patterns(attns_by_heads, plot_fig=True):
         per_head_energies.append(energy)
     # Save figures if requested
     if plot_fig:
-        fig.savefig(f'attn_head_{head_i}.png', dpi=500)
-        fig_magnitude_spectrum.savefig(f'magnitude_spectrum_head_{head_i}.png', dpi=500)
+        fig.savefig(os.path.join(out_dir, f'attn_head_{head_i}.png'), dpi=500)
+        fig_magnitude_spectrum.savefig(os.path.join(out_dir, f'magnitude_spectrum_head_{head_i}.png'), dpi=500)
 
     # Compute mean aggregation
     agg_heads = np.mean(attns_by_heads, axis=0)
@@ -109,7 +116,7 @@ def analyze_attention_patterns(attns_by_heads, plot_fig=True):
         ax_avg_spectrum.set_title('Aggregated Magnitude Spectrum')
         ax_avg_spectrum.set_axis_off()
         plt.show()
-        fig_avg_spectrum.savefig(f'magnitude_spectrum_avg_head.png', dpi=500)
+        fig_avg_spectrum.savefig(os.path.join(out_dir, f'magnitude_spectrum_avg_head.png'), dpi=500)
 
     # Compute entropy aggregation
     agg_heads_entropy = layerwise_entropy(attns_by_heads)
@@ -120,7 +127,7 @@ def analyze_attention_patterns(attns_by_heads, plot_fig=True):
         ax.set_title('Aggregated Attention Entropy')
         ax.set_axis_off()
         plt.show()
-        fig.savefig(f'entropy_avg_head.png', dpi=500)
+        fig.savefig(os.path.join(out_dir, f'entropy_avg_head.png'), dpi=500)
 
         fig_entropy, ax_entropy = plt.subplots(figsize=(10, 10))
         agg_entropy_energy = high_frequency_energy(agg_heads_entropy, ax_entropy, 'Aggregated heads by entropy', plot_fig)
@@ -132,7 +139,7 @@ def analyze_attention_patterns(attns_by_heads, plot_fig=True):
         ax_entropy.set_title('Aggregated Attention Entropy')
         ax_entropy.set_axis_off()
         plt.show()
-        fig_entropy.savefig(f'magnitude_spectrum_entropy_avg_head.png', dpi=500)
+        fig_entropy.savefig(os.path.join(out_dir, f'magnitude_spectrum_entropy_avg_head.png'), dpi=500)
 
     return per_head_energies, avg_energy, agg_entropy_energy
 
@@ -145,7 +152,7 @@ if __name__ == "__main__":
         analysis_type="tokenwise",
         )[0]['attention_matrices']
     
-    
+    out_dir = os.path.join(get_git_root(), "results/high_freq_visuals")
 
     plot_fig = False
     all_per_head_energies = []
@@ -201,5 +208,5 @@ if __name__ == "__main__":
     ax.grid(True, linestyle='--', alpha=0.7)
     
     # Save figure
-    plt.savefig('energy_distributions_comparison.png', dpi=300)
+    plt.savefig(os.path.join(out_dir, 'energy_distributions_comparison.png'), dpi=300)
     plt.show()
