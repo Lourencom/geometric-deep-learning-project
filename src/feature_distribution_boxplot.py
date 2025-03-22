@@ -45,5 +45,7 @@ for i, feature_name in enumerate(feature_names):
     
     axs[i].boxplot(features_by_families[feature_name].values(), patch_artist=True, labels=families)
     axs[i].set_title(feature_name)
+
+plt.suptitle("Boxplot feature distributions for different model families and features")
 plt.show()
 fig.savefig(os.path.join(out_dir, "families_feature_distributions.png"), dpi=300)
