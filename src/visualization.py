@@ -25,7 +25,7 @@ def plot_responses(prompt_text, prompt_data, model_answers, save_path):
         f"Difficulty: {prompt_data['difficulty']} | "
         f"Category: {prompt_data['category']} | "
         f"N-shots: {prompt_data['n_shots']}\n"
-        f"Prompt: {prompt_text[:100]}...\n"
+        f"Prompt: {prompt_text}\n"
     )
     
     # Add model answers with validation
