@@ -201,8 +201,8 @@ if __name__ == "__main__":
         patch.set_facecolor(color)
     
     # Add title and labels
-    ax.set_title('Comparison of High Frequency Energy Distributions')
-    ax.set_ylabel('Energy')
+    ax.set_title('Comparison of High Frequency Magnitude Distributions')
+    ax.set_ylabel('Magnitude')
     
     # Add grid for better readability
     ax.grid(True, linestyle='--', alpha=0.7)
