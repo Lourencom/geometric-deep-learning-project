@@ -42,6 +42,21 @@ def get_args():
     # Visualization arguments
     parser.add_argument("--plot_matrices", type=bool, default=False, help="Whether to plot attention matrices")
     
+    # Head aggregation arguments
+    parser.add_argument(
+        "--aggregate_heads_fn",
+        type=str,
+        default="entropy",
+        choices=["average", "entropy"],
+        help="Method to aggregate attention heads: 'average' or 'entropy'"
+    )
+    parser.add_argument(
+        "--entropy_alpha",
+        type=float,
+        default=1.0,
+        help="Alpha parameter for entropy-based head aggregation (0.0 = lowest entropy, 0.5 = median, 1.0 = highest)"
+    )
+    
     args = parser.parse_args()
 
     args.output_dir = relative_to_absolute_path(args.output_dir)

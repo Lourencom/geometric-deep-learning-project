@@ -52,6 +52,7 @@ class GraphFeatures:
         Shape 4D: (layers, heads, n_query, n_key)
         """
         self.analysis_type = analysis_type
+        self.kwargs = kwargs
 
         self.feature_fn_map = {
             "clustering": lambda G: compute_average_clustering(G),
@@ -168,10 +169,19 @@ class GraphFeatures:
         attn_arr = self.raw_attn_matrices
         """Plot raw attention matrices before any processing."""
         matrices = []
+        aggregate_heads_fn = self.kwargs.get("aggregate_heads_fn", "average")
+        entropy_alpha = self.kwargs.get("entropy_alpha", 0.5)
+        
         for autoregressive_step in range(len(attn_arr)):
             step_matrices = attn_arr[autoregressive_step]
-            #layer_attns = head_aggregate_single_token(step_matrices)
-            layer_attns = head_agg_rowwise_entropy(step_matrices, 0.75)
+            
+            if aggregate_heads_fn == "average":
+                layer_attns = head_aggregate_single_token(step_matrices)
+            elif aggregate_heads_fn == "entropy":
+                layer_attns = head_agg_rowwise_entropy(step_matrices, entropy_alpha)
+            else:
+                raise ValueError(f"Invalid aggregation method: {aggregate_heads_fn}")
+                
             aggregated_attn = aggregate_attention_layers(layer_attns)
             
             # remove sink

@@ -86,8 +86,8 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                 remove_attention_sink=True,
                 analysis_type=analysis_type,
                 plot_raw=True,
-                aggregate_heads_fn="entropy",
-                entropy_alpha=1.0
+                aggregate_heads_fn=args.aggregate_heads_fn,
+                entropy_alpha=args.entropy_alpha
             )
 
             matrix_filename = os.path.join(
@@ -122,8 +122,8 @@ def analyze_prompt(args, prompt_id, graph_strategies, features):
                 analysis_type=analysis_type,
                 plot_raw=True,
                 save_path=os.path.join(strategy_matrices_dir, f"{model_identifier}_{analysis_type}_raw"),
-                aggregate_heads_fn="entropy",
-                entropy_alpha=1.0,
+                aggregate_heads_fn=args.aggregate_heads_fn,
+                entropy_alpha=args.entropy_alpha,
                 **strategy
             )
 
