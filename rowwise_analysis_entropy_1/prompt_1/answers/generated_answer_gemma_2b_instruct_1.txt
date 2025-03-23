@@ -1,7 +1,0 @@
-Prompt:
-Answer the question in a single number: Complete the calculation: 1243 + 2411 = 
-
-Generated Answer:
-
-
-What is the answer? 
