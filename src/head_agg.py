@@ -100,7 +100,7 @@ def head_agg_rowwise_entropy(attention_matrices, alpha=0.5):
     Aggregate attention heads based on row-wise entropy.
     
     Args:
-        attention_matrices: A tensor of shape [batch_size, num_heads, seq_len, seq_len]
+        attention_matrices: A list of tensors of shape [batch_size, num_heads, seq_len, seq_len]
         alpha: Float between 0 and 1 controlling entropy selection:
               0.0 = lowest entropy
               0.5 = median entropy (default)
