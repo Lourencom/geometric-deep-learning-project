@@ -56,7 +56,7 @@ for i, feature_name in enumerate(feature_names):
                 # Handle if feature_value is a list by taking the average
                 if isinstance(feature_value, list):
                     if feature_value:  # Check if list is not empty
-                        feature_value = np.mean(feature_value)
+                        feature_value = np.median(feature_value)
                     else:
                         continue  # Skip if empty list
                 
@@ -86,7 +86,7 @@ for i, feature_name in enumerate(feature_names):
         # Add labels and title
         axs[i].set_xlabel('Model Size (Billions of Parameters)')
         axs[i].set_ylabel(f'{feature_name.replace("_", " ").title()} Value')
-        axs[i].set_title(f'{feature_name.replace("_", " ").title()} Distribution Across Model Families')
+        axs[i].set_title(f'{feature_name.replace("_", " ").title()} evolution with model size')
         
         # Adjust legend and layout
         axs[i].legend(title='Model Family')
@@ -95,6 +95,6 @@ for i, feature_name in enumerate(feature_names):
 
 print("All lineplots generated successfully.")
 
-plt.suptitle('Different Feature Distributions Across Model Families')
+plt.suptitle('Median feature values evolving with model size, across different model families')
 out_path = os.path.join(out_dir, f'feature_distribution_lineplot.png')
 plt.savefig(out_path, dpi=300)
