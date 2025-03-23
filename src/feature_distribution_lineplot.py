@@ -39,7 +39,7 @@ with open(os.path.join(get_git_root(), "entropy/all_comparisons_2/prompt_1/featu
 
 models_by_families = {'mistral': ['mistral_8b_instruct', 'mistral_24b_instruct'], 'qwen': ['qwen_1.5b_instruct', 'qwen_3b_instruct', 'qwen_7b_instruct'], 'llama': ['llama_1b_instruct', 'llama_8b_instruct'], 'gemma': ['gemma_2b_instruct', 'gemma_9b_instruct', 'gemma_27b_instruct']}
 
-fig, axs = plt.subplots(1, 3, figsize=(15, 5))
+fig, axs = plt.subplots(1, 3, figsize=(18, 5))
 # Create a lineplot for each feature
 for i, feature_name in enumerate(feature_names):
     
@@ -84,16 +84,17 @@ for i, feature_name in enumerate(feature_names):
         )
         
         # Add labels and title
-        plt.xlabel('Model Size (Billions of Parameters)')
-        plt.ylabel(f'{feature_name.replace("_", " ").title()} Value')
-        plt.title(f'{feature_name.replace("_", " ").title()} Distribution Across Model Families')
+        axs[i].set_xlabel('Model Size (Billions of Parameters)')
+        axs[i].set_ylabel(f'{feature_name.replace("_", " ").title()} Value')
+        axs[i].set_title(f'{feature_name.replace("_", " ").title()} Distribution Across Model Families')
         
         # Adjust legend and layout
-        plt.legend(title='Model Family')
-        plt.tight_layout()
+        axs[i].legend(title='Model Family')
+        #plt.tight_layout()
 
 
 print("All lineplots generated successfully.")
 
+plt.suptitle('Different Feature Distributions Across Model Families')
 out_path = os.path.join(out_dir, f'feature_distribution_lineplot.png')
 plt.savefig(out_path, dpi=300)
