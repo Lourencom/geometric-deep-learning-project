@@ -93,14 +93,34 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
         ax.set_xlabel("Tokens")
         ax.set_ylabel(feature)
         ax.set_title(feature)
-        #ax.grid(True)
+        ax.grid(False)
     
     # Remove unused subplots
     for idx in range(len(features), len(axes)):
         fig.delaxes(axes[idx])
     
-    # Add legend
+    # Add legend sorted by model size
     handles, labels = axes[0].get_legend_handles_labels()
+    
+    # Create a mapping of model identifiers to their sizes
+    model_sizes = {
+        "llama": {"1b": 1, "8b": 8, "70b": 70},
+        "mistral": {"8b": 8, "24b": 24},
+        "qwen": {"0.5b": 0.5, "1.5b": 1.5, "3b": 3, "7b": 7, "14b": 14, "32b": 32, "72b": 72},
+        "gemma": {"2b": 2, "9b": 9, "27b": 27}
+    }
+    
+    # Sort labels and handles based on model size
+    def get_model_size(label):
+        family, size, _ = label.split('_')
+        return model_sizes[family][size]
+    
+    # Sort based on model size
+    sorted_indices = sorted(range(len(labels)), key=lambda i: get_model_size(labels[i]))
+    handles = [handles[i] for i in sorted_indices]
+    labels = [labels[i] for i in sorted_indices]
+    
+    # Create legend with sorted handles and labels
     fig.legend(handles, labels, loc='center right', bbox_to_anchor=(0.98, 0.5))
     
     # Add prompt as title

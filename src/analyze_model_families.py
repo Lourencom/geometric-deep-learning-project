@@ -76,18 +76,11 @@ def analyze_model_families(prompt_dir, save_path):
         ax.set_title(metric)
         ax.set_xlabel('Step')
         ax.set_ylabel(metric)
-        #ax.grid(True)
+        ax.grid(False)
         
         # Only show legend on first subplot
         if idx == 0:
             ax.legend()
-
-    # Add prompt info as suptitle
-    prompt_info = responses['prompt']
-    #plt.suptitle(f"Prompt {prompt_info['id']}: {prompt_info['text'][:100]}...\n"
-    #             f"Difficulty: {prompt_info['difficulty']}, "
-    #             f"Category: {', '.join(prompt_info['category'])}", 
-    #             wrap=True)
 
     # Adjust layout to prevent overlap
     plt.tight_layout()
@@ -112,6 +105,6 @@ if __name__ == "__main__":
         Path(get_git_root(), 'results/average_compare_all_models'),
         Path(get_git_root(), 'results/entropy_compare_all_models')
     ]
-    
+
     for base_dir in base_dirs:
         main(base_dir)
