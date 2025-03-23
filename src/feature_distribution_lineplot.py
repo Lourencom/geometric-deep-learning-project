@@ -39,9 +39,10 @@ with open(os.path.join(get_git_root(), "entropy/all_comparisons_2/prompt_1/featu
 
 models_by_families = {'mistral': ['mistral_8b_instruct', 'mistral_24b_instruct'], 'qwen': ['qwen_1.5b_instruct', 'qwen_3b_instruct', 'qwen_7b_instruct'], 'llama': ['llama_1b_instruct', 'llama_8b_instruct'], 'gemma': ['gemma_2b_instruct', 'gemma_9b_instruct', 'gemma_27b_instruct']}
 
+fig, axs = plt.subplots(1, 3, figsize=(15, 5))
 # Create a lineplot for each feature
-for feature_name in feature_names:
-    plt.figure(figsize=(10, 6))
+for i, feature_name in enumerate(feature_names):
+    
     
     # Prepare data for plotting
     plot_data = []
@@ -71,7 +72,7 @@ for feature_name in feature_names:
         
         # Create lineplot
         sns.set_style("whitegrid")
-        ax = sns.lineplot(
+        sns.lineplot(
             data=df, 
             x='Model_Size', 
             y='Feature_Value', 
@@ -79,6 +80,7 @@ for feature_name in feature_names:
             marker='o', 
             markersize=8,
             linewidth=2,
+            ax=axs[i]
         )
         
         # Add labels and title
@@ -89,14 +91,9 @@ for feature_name in feature_names:
         # Adjust legend and layout
         plt.legend(title='Model Family')
         plt.tight_layout()
-        
-        # Save the figure
-        out_path = os.path.join(out_dir, f'{feature_name}_lineplot.png')
-        plt.savefig(out_path, dpi=300)
-        print(f"Saved {feature_name} lineplot to {out_path}")
-    else:
-        print(f"No data available for feature {feature_name}")
-    
-    plt.close()
+
 
 print("All lineplots generated successfully.")
+
+out_path = os.path.join(out_dir, f'feature_distribution_lineplot.png')
+plt.savefig(out_path, dpi=300)
