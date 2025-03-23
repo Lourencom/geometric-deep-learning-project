@@ -1,0 +1,1 @@
+{"prompt": {"text": "Answer the following question with a concise, one-word response. Example 1: What is the capital of Portugal? Lisbon.\nQuestion: What is the capital of France? ", "id": 2, "difficulty": "easy", "category": ["common_knowledge"], "n_shots": 1}, "responses": {"llama_1b_instruct": " Paris.\n", "llama_8b_instruct": " Paris."}}
