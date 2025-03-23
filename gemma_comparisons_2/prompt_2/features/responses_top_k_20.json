@@ -1,1 +1,0 @@
-{"prompt": {"text": "Answer the question in a single word. The capital of France is: ", "id": 2, "difficulty": "easy", "category": ["common_knowledge"], "n_shots": 0}, "responses": {"gemma_2b_instruct": "\n\n**Paris** \n", "gemma_9b_instruct": "\n\n**Paris**", "gemma_27b_instruct": "\nParis\n\nGood job!"}}
