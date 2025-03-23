@@ -35,6 +35,8 @@ def plot_responses(prompt_text, prompt_data, model_answers, save_path):
         status = "✓" if is_correct else "✗"
         if len(answer) > 100:
             answer = answer[:100] + "..."
+        # Escape dollar signs to prevent matplotlib from interpreting them as math mode
+        answer = answer.replace('$', '\\$')
         answer_info += f"\n{model_identifier} [{status}]: {answer}"
     
     full_info = prompt_info + answer_info
