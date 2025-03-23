@@ -59,8 +59,8 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
     """Plot features with enhanced information."""
     
     n_features = len(features)
-    n_cols = 2
-    n_rows = (n_features + 1) // 2
+    n_cols = 3
+    n_rows = (n_features + 1) // n_cols
     
     # Adjust figure size to be more compact
     fig, axes = plt.subplots(n_rows, n_cols, figsize=(15, 4*n_rows))
@@ -91,7 +91,7 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
         ax.set_xlabel("Tokens")
         ax.set_ylabel(feature)
         ax.set_title(feature)
-        ax.grid(True)
+        #ax.grid(True)
     
     # Remove unused subplots
     for idx in range(len(features), len(axes)):
@@ -102,7 +102,7 @@ def plot_features(features, graph_features, models, prompt_text, prompt_data, mo
     fig.legend(handles, labels, loc='center right', bbox_to_anchor=(0.98, 0.5))
     
     # Add prompt as title
-    fig.suptitle(prompt_text[:100] + "...", y=1.0, fontsize=9, wrap=True)
+    #fig.suptitle("Feature values", y=1.0, fontsize=9, wrap=True)
     
     # Tighter layout with less spacing
     plt.tight_layout()

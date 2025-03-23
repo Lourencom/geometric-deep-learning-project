@@ -74,7 +74,7 @@ def analyze_model_families(prompt_dir):
         ax.set_title(metric)
         ax.set_xlabel('Step')
         ax.set_ylabel(metric)
-        ax.grid(True)
+        #ax.grid(True)
         
         # Only show legend on first subplot
         if idx == 0:
