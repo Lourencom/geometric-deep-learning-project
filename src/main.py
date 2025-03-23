@@ -187,38 +187,19 @@ if __name__ == "__main__":
 
     features = [
         'clustering', 
-        'average_shortest_path_length',
+        #'average_shortest_path_length',
         'average_degree',
-        'connectivity',
-        'sparseness',
-        'hubs',
-        'clusters',
-        'communities',
-        'fourier',
-        'commute_time_efficiency',
+        #'connectivity',
+        #'sparseness',
+        #'hubs',
+        #'clusters',
+        #'communities',
+        #'fourier',
+        #'commute_time_efficiency',
         'pagerank',
-        'eigenvector_centrality',
-        'cycle_count'
+        #'eigenvector_centrality',
+        #'cycle_count'
         ]
-    """
-        'clustering', 
-        'average_shortest_path_length', 
-        # 'forman_ricci', # division by 0, failed
-        #'ollivier_ricci', # does not work, parallelism errors
-        'average_degree',
-        'connectivity',
-        'sparseness',
-        'hubs',
-        'clusters',
-        'communities',
-        'fourier',
-        'commute_time_efficiency',
-        'pagerank',
-        'eigenvector_centrality',
-        'cycle_count',
-        
-    ]
-    """
 
     for prompt_id in args.prompt_ids:
         analyze_prompt(args, prompt_id, graph_strategies, features)
