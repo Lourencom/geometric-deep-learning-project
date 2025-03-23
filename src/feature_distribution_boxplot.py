@@ -1,15 +1,8 @@
-
 import json
 import matplotlib.pyplot as plt
 import numpy as np
 import os
-import git
-
-
-def get_git_root():
-    repo = git.Repo('.', search_parent_directories=True)
-    return repo.git.rev_parse("--show-toplevel")
-
+from utils import get_git_root
 
 def get_model_family_from_name(model_name):
     return model_name.split('_')[0]
@@ -23,29 +16,37 @@ feature_names = [
 out_dir = os.path.join(get_git_root(), "families")
 os.makedirs(out_dir, exist_ok=True)
 
-with open(os.path.join(get_git_root(), "entropy/all_comparisons_2/prompt_1/features/features_top_k_20.json"), "r") as f:
-    results = json.load(f)
+# Read feature files from all prompts
+prompts = ['prompt_1', 'prompt_2', 'prompt_4']
+all_results = []
+for prompt in prompts:
+    feature_file = os.path.join(get_git_root(), f"results/average_compare_all_models/{prompt}/features/features_top_k_20.json")
+    with open(feature_file, "r") as f:
+        all_results.append(json.load(f))
 
+# Combine results from all prompts
+combined_results = {}
+for model_name in all_results[0].keys():
+    combined_results[model_name] = {feature: [] for feature in feature_names}
+    for results in all_results:
+        for feature_name in feature_names:
+            combined_results[model_name][feature_name].extend(results[model_name][feature_name])
 
 families = {'mistral', 'qwen', 'llama', 'gemma'}
 features_by_families = {feature_name: {family: [] for family in families} for feature_name in feature_names}
-for model_name in results.keys():
+
+for model_name in combined_results.keys():
     for feature_name in feature_names:
         model_family = get_model_family_from_name(model_name)
-        
-        features_by_families[feature_name][model_family].append(results[model_name][feature_name])
-
-
-for feature_name in feature_names:
-    for family in families:
-        features_by_families[feature_name][family] = [el for sublist in features_by_families[feature_name][family] for el in sublist] # flatten the list
+        features_by_families[feature_name][model_family].extend(combined_results[model_name][feature_name])
 
 fig, axs = plt.subplots(1, len(feature_names), figsize=(20, 10))
 for i, feature_name in enumerate(feature_names):
-    
-    axs[i].boxplot(features_by_families[feature_name].values(), patch_artist=True, labels=families)
+    data = [features_by_families[feature_name][family] for family in families]
+    axs[i].boxplot(data, patch_artist=True, labels=families)
     axs[i].set_title(feature_name)
 
-plt.suptitle("Boxplot feature distributions for different model families and features")
+plt.suptitle("Boxplot feature distributions for different model families and features (combined across prompts)")
+plt.tight_layout()
 plt.show()
 fig.savefig(os.path.join(out_dir, "families_feature_distributions.png"), dpi=300)
