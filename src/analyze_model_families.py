@@ -4,8 +4,10 @@ import matplotlib.pyplot as plt
 from collections import defaultdict
 import os
 from pathlib import Path
+from utils import get_git_root
 
-def analyze_model_families(prompt_dir):
+
+def analyze_model_families(prompt_dir, save_path):
     # Load the data
     responses_path = prompt_dir / 'features' / 'responses_top_k_20.json'
     features_path = prompt_dir / 'features' / 'features_top_k_20.json'
@@ -29,7 +31,7 @@ def analyze_model_families(prompt_dir):
     
     # Calculate number of rows and columns for subplots
     n_metrics = len(metrics)
-    n_cols = 4  # We'll use 4 columns
+    n_cols = 3  # We'll use 3 columns
     n_rows = (n_metrics + n_cols - 1) // n_cols  # Ceiling division
     
     # Create figure and subplots
@@ -82,28 +84,34 @@ def analyze_model_families(prompt_dir):
 
     # Add prompt info as suptitle
     prompt_info = responses['prompt']
-    plt.suptitle(f"Prompt {prompt_info['id']}: {prompt_info['text'][:100]}...\n"
-                 f"Difficulty: {prompt_info['difficulty']}, "
-                 f"Category: {', '.join(prompt_info['category'])}", 
-                 wrap=True)
+    #plt.suptitle(f"Prompt {prompt_info['id']}: {prompt_info['text'][:100]}...\n"
+    #             f"Difficulty: {prompt_info['difficulty']}, "
+    #             f"Category: {', '.join(prompt_info['category'])}", 
+    #             wrap=True)
 
     # Adjust layout to prevent overlap
     plt.tight_layout()
     plt.subplots_adjust(top=0.95)  # Make room for suptitle
     
     # Save plot
-    output_path = prompt_dir / 'all_metrics_by_family.png'
-    plt.savefig(output_path)
+    plt.savefig(save_path)
     plt.close()
 
-def main():
-    base_dir = Path('../all_comparisons_2')
-    
+def main(base_dir):
+
     # Process each prompt directory
     for prompt_dir in base_dir.glob('prompt_*'):
         if prompt_dir.is_dir():
             print(f"Processing {prompt_dir}")
-            analyze_model_families(prompt_dir)
+            save_path = prompt_dir / 'all_metrics_by_family.png'
+            analyze_model_families(prompt_dir, save_path)
+
 
 if __name__ == "__main__":
-    main()
+    base_dirs = [
+        Path(get_git_root(), 'results/average_compare_all_models'),
+        Path(get_git_root(), 'results/entropy_compare_all_models')
+    ]
+    
+    for base_dir in base_dirs:
+        main(base_dir)
