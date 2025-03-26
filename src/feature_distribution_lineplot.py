@@ -36,41 +36,71 @@ os.makedirs(out_dir, exist_ok=True)
 
 
 data_dir = os.path.join(get_git_root(), "results/entropy_compare_all_models/")
+additional_dir = os.path.join(get_git_root(), "pavle_asked/all_models/")
 prompt_ids = ["prompt_1", "prompt_2", "prompt_4"]
+
+# Updated model list including additional models
+models_by_families = {
+    'mistral': ['mistral_8b_instruct', 'mistral_24b_instruct'], 
+    'qwen': ['qwen_1.5b_instruct', 'qwen_3b_instruct', 'qwen_7b_instruct', 'qwen_14b_instruct', 'qwen_32b_instruct'], 
+    'llama': ['llama_1b_instruct', 'llama_8b_instruct', 'llama_70b_instruct'], 
+    'gemma': ['gemma_2b_instruct', 'gemma_9b_instruct', 'gemma_27b_instruct']
+}
 
 # Dictionary to store feature values across all prompts
 # Structure: {feature_name: {family: {model: [values_from_different_prompts]}}}
 all_prompts_data = {feature_name: {family: {model: [] for model in models} 
-                    for family, models in {'mistral': ['mistral_8b_instruct', 'mistral_24b_instruct'], 
-                                          'qwen': ['qwen_1.5b_instruct', 'qwen_3b_instruct', 'qwen_7b_instruct'], 
-                                          'llama': ['llama_1b_instruct', 'llama_8b_instruct'], 
-                                          'gemma': ['gemma_2b_instruct', 'gemma_9b_instruct', 'gemma_27b_instruct']}.items()} 
+                    for family, models in models_by_families.items()} 
                    for feature_name in feature_names}
 
-# Load data from all prompts
+# Load data from the main directory
 for prompt_id in prompt_ids:
     try:
-        with open(os.path.join(data_dir, f"{prompt_id}/features/features_top_k_20.json"), "r") as f:
-            results = json.load(f)
-            
-            # Extract feature values for each model and store them
-            for feature_name in feature_names:
-                for family, models in {'mistral': ['mistral_8b_instruct', 'mistral_24b_instruct'], 
-                                      'qwen': ['qwen_1.5b_instruct', 'qwen_3b_instruct', 'qwen_7b_instruct'], 
-                                      'llama': ['llama_1b_instruct', 'llama_8b_instruct'], 
-                                      'gemma': ['gemma_2b_instruct', 'gemma_9b_instruct', 'gemma_27b_instruct']}.items():
-                    for model in models:
-                        if model in results and feature_name in results[model]:
-                            feature_value = results[model][feature_name]
-                            # Handle if feature_value is a list by taking the median
-                            if isinstance(feature_value, list) and feature_value:
-                                feature_value = np.median(feature_value)
-                            
-                            # Only add if it's a valid numeric value
-                            if isinstance(feature_value, (int, float)) and not np.isnan(feature_value):
-                                all_prompts_data[feature_name][family][model].append(feature_value)
+        file_path = os.path.join(data_dir, f"{prompt_id}/features/features_top_k_20.json")
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                results = json.load(f)
+                
+                # Extract feature values for each model and store them
+                for feature_name in feature_names:
+                    for family, models in models_by_families.items():
+                        for model in models:
+                            if model in results and feature_name in results[model]:
+                                feature_value = results[model][feature_name]
+                                # Handle if feature_value is a list by taking the median
+                                if isinstance(feature_value, list) and feature_value:
+                                    feature_value = np.median(feature_value)
+                                
+                                # Only add if it's a valid numeric value
+                                if isinstance(feature_value, (int, float)) and not np.isnan(feature_value):
+                                    all_prompts_data[feature_name][family][model].append(feature_value)
     except FileNotFoundError:
-        print(f"Warning: Could not find file for {prompt_id}")
+        print(f"Warning: Could not find file for {prompt_id} in main directory")
+        continue
+
+# Load data from the additional directory
+for prompt_id in prompt_ids:
+    try:
+        file_path = os.path.join(additional_dir, f"{prompt_id}/features/features_top_k_20.json")
+        if os.path.exists(file_path):
+            with open(file_path, "r") as f:
+                results = json.load(f)
+                
+                # Extract feature values for each model and store them
+                for feature_name in feature_names:
+                    for family, models in models_by_families.items():
+                        for model in models:
+                            if model in results and feature_name in results[model]:
+                                feature_value = results[model][feature_name]
+                                # Handle if feature_value is a list by taking the median
+                                if isinstance(feature_value, list) and feature_value:
+                                    feature_value = np.median(feature_value)
+                                
+                                # Only add if it's a valid numeric value
+                                if isinstance(feature_value, (int, float)) and not np.isnan(feature_value):
+                                    all_prompts_data[feature_name][family][model].append(feature_value)
+    except FileNotFoundError:
+        print(f"Warning: Could not find file for {prompt_id} in additional directory")
         continue
 
 # Create the plots with error bars based on prompt variation
@@ -80,11 +110,6 @@ fig, axs = plt.subplots(1, 3, figsize=(18, 5))
 for i, feature_name in enumerate(feature_names):
     # Prepare data for plotting
     plot_data = []
-    
-    models_by_families = {'mistral': ['mistral_8b_instruct', 'mistral_24b_instruct'], 
-                         'qwen': ['qwen_1.5b_instruct', 'qwen_3b_instruct', 'qwen_7b_instruct'], 
-                         'llama': ['llama_1b_instruct', 'llama_8b_instruct'], 
-                         'gemma': ['gemma_2b_instruct', 'gemma_9b_instruct', 'gemma_27b_instruct']}
     
     for family in models_by_families:
         for model in models_by_families[family]:
