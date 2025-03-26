@@ -1,7 +1,7 @@
 [
     {
         "id": 1,
-        "prompt": "Answer the following question with a concise, one-number response. Example 1: Complete the calculation: 2 + 2 = 4.\nQuestion: Complete the calculation: 1243 + 2411 = ",
+        "prompt": "Answer the following question with a concise, one-number response.\nExample 1: Complete the calculation: 2 + 2 = 4.\nExample 2: Complete the calculation: 5 + 5 = 10.\nComplete the calculation: 1243 + 2411 =",
         "difficulty": "medium",
         "category": ["arithmetic"],
         "n_shots": 1,
@@ -10,7 +10,7 @@
 
     {
         "id": 2,
-        "prompt": "Answer the following question with a concise, one-word response. Example 1: What is the capital of Portugal? Lisbon.\nQuestion: What is the capital of France? ",
+        "prompt": "Answer the following question with a concise, one-word response.\nExample 1: What is the capital of Portugal? Lisbon.\nExample 2: What is the capital of Serbia? Belgrade.\nWhat is the capital of France?",
         "difficulty": "easy",
         "category": ["common_knowledge"],
         "n_shots": 1,
@@ -28,7 +28,7 @@
 
     {
         "id": 4,
-        "prompt": "Answer the following question with a concise, one-word response (Yes or No). Question: If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?",
+        "prompt": "Answer the following question with a concise, one-word response (Yes or No).\nQuestion: If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?",
         "difficulty": "medium",
         "category": ["logical_reasoning"],
         "n_shots": 0,

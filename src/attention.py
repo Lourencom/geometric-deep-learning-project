@@ -79,7 +79,7 @@ def extract_attention(current_model, prompt_id, outputs, output_dir, save=False)
     return {"prompt_attns": attention_arrays, "intermediate_attns": intermediate_attention_arrays}
 
 
-def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=512):
+def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=512, target_answer=None):
     """
     Captures the full attention matrices for each generated token across all layers.
     
@@ -157,7 +157,7 @@ def get_token_by_token_attention(model, tokenizer, prompt_text, max_new_tokens=5
             
             # Check if we've completed a sentence
             current_text = tokenizer.decode(current_ids[0][input_length:], skip_special_tokens=True)
-            if any(end_of_sentence in current_text for end_of_sentence in ['.', '!', '?']):
+            if any(end_of_sentence in current_text for end_of_sentence in ['.', '!', '?', target_answer]):
                 break
     
     # Decode the full generated text
@@ -201,18 +201,20 @@ def load_attn_tokenwise(models, prompt_path, prompt_id, prompt_difficulty, promp
     attn_dicts = []
     
     for model_tuple in models:
-        prompts = Prompts(prompt_path)       
-        prompt = prompts.get_prompt(
+        prompts = Prompts(prompt_path)
+        prompt_object = prompts.get_prompt(
             prompt_id=prompt_id,
             difficulty=prompt_difficulty,
             category=prompt_category,
             n_shots=prompt_n_shots
-        )['prompt']
+        )
+        prompt = prompt_object['prompt']
+        target_answer = prompt_object['target_answer']
 
         # Get tokenwise attentions
         model_family, model_size, model_variant = model_tuple
         model, tokenizer = get_model_and_tokenizer(model_family, model_size, model_variant)
-        attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=max_new_tokens)
+        attention_data = get_token_by_token_attention(model, tokenizer, prompt, max_new_tokens=max_new_tokens, target_answer=target_answer)
 
         # Return the full attention data dictionary instead of just attn matrices
         attn_dicts.append(attention_data)

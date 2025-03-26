@@ -20,7 +20,7 @@ os.makedirs(out_dir, exist_ok=True)
 prompts = ['prompt_1', 'prompt_2', 'prompt_4']
 all_results = []
 for prompt in prompts:
-    feature_file = os.path.join(get_git_root(), f"results/average_compare_all_models/{prompt}/features/features_top_k_20.json")
+    feature_file = os.path.join(get_git_root(), f"results/entropy_compare_all_models/{prompt}/features/features_top_k_20.json")
     with open(feature_file, "r") as f:
         all_results.append(json.load(f))
 
@@ -49,4 +49,4 @@ for i, feature_name in enumerate(feature_names):
 plt.suptitle("Boxplot feature distributions for different model families and features (combined across prompts)")
 plt.tight_layout()
 plt.show()
-fig.savefig(os.path.join(out_dir, "families_feature_distributions.png"), dpi=300)
+fig.savefig(os.path.join(out_dir, "feature_boxplots_families_entropy.png"), dpi=300)
