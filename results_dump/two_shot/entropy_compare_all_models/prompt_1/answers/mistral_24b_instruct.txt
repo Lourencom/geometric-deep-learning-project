@@ -1,0 +1,11 @@
+Prompt ID: 1
+
+Prompt:
+Answer the following question with a concise, one-number response.
+Example 1: Complete the calculation: 2 + 2 = 4.
+Example 2: Complete the calculation: 5 + 5 = 10.
+Question: Complete the calculation: 1243 + 2411 = 
+
+Generated Answer:
+3654.
+
