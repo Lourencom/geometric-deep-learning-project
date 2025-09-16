@@ -1,8 +1,8 @@
 """Module containing graph metric computations"""
 import networkx as nx
 import numpy as np
-from GraphRicciCurvature.FormanRicci import FormanRicci
-from GraphRicciCurvature.OllivierRicci import OllivierRicci
+# from GraphRicciCurvature.FormanRicci import FormanRicci
+# from GraphRicciCurvature.OllivierRicci import OllivierRicci
 
 def compute_average_node_degree(G):
     """Compute average out-degree of nodes in the graph."""
@@ -22,17 +22,19 @@ def compute_average_shortest_path_length(G):
 
 def compute_ollivier_ricci(G):
     """Compute median Ollivier-Ricci curvature."""
-    orc = OllivierRicci(G)
-    orc.compute_ricci_curvature()
-    edges = orc.G.edges(data=True)
-    return np.median([data['ricciCurvature'] for _,_,data in edges]) if edges else 0
+    # orc = OllivierRicci(G)
+    # orc.compute_ricci_curvature()
+    # edges = orc.G.edges(data=True)
+    # return np.median([data['ricciCurvature'] for _,_,data in edges]) if edges else 0
+    return None
 
 def compute_forman_ricci(G):
     """Compute median Forman-Ricci curvature."""
-    frc = FormanRicci(G)
-    frc.compute_ricci_curvature()
-    edges = frc.G.edges(data=True)
-    return np.median([data['formanCurvature'] for _,_,data in edges]) if edges else 0
+    # frc = FormanRicci(G)
+    # frc.compute_ricci_curvature()
+    # edges = frc.G.edges(data=True)
+    # return np.median([data['formanCurvature'] for _,_,data in edges]) if edges else 0
+    return None
 
 def compute_connectivity(G):
     """Compute number of strongly connected components."""
