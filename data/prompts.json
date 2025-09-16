@@ -73,5 +73,142 @@
         "n_shots": 0,
         "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/empirical_judgments/task.json",
         "target_answer": "neutral"
+    },
+
+    {
+        "id": 9,
+        "prompt": "The CEO of a company is sitting in his office when his Vice President of R&D comes in and says, 'We are thinking of starting a new programme. It will help us increase profits, but it will also help the environment.' The CEO responds that he doesn't care about helping the environment and just wants to make as much profit as possible. The programme is carried out, profits are made and the environment is helped. Did the CEO intentionally help the environment?",
+        "difficulty": "medium",
+        "category": ["moral_reasoning", "reading_comprehension"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/causal_judgment/task.json",
+        "target_answer": "no"
+    },
+
+    {
+        "id": 10,
+        "prompt": "Lauren and Jane work for the same company. They each need to use a computer for work sometimes. Unfortunately, the computer isn't very powerful. If two people are logged on at the same time, it usually crashes. So the company decided to institute an official policy. It declared that Lauren would be the only one permitted to use the computer in the mornings and that Jane would be the only one permitted to use the computer in the afternoons. As expected, Lauren logged on the computer the next day at 9:00 am. But Jane decided to disobey the official policy. She also logged on at 9:00 am. The computer crashed immediately. Did Jane cause the computer to crash?",
+        "difficulty": "medium",
+        "category": ["moral_reasoning", "reading_comprehension"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/causal_judgment/task.json",
+        "target_answer": "yes"
+    },
+
+
+    {
+        "id": 11,
+        "prompt": "What does the following Python code do?\nPython code:\nt = [s**2 for s in range(7)]\nOptions:\nA) initializes list t with square of numbers from 0 to 6\nB) initializes list t with square of numbers from 0 to 2\nC) computes multiples of 2\nD) populates list t with 10 numbers",
+        "difficulty": "medium",
+        "category": ["programming"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/code_line_description/task.json",
+        "target_answer": "A"
+    },
+
+    {
+        "id": 12,
+        "prompt": "What does the `print` statement in the following Python code accomplish?\n```python\nx = {5,6,7,8}\ny = {5,6,10,11}\nprint(set(x)-set(y))\n```\nOptions:\nA) prints the set of elements in list x but not list y\nB) prints the difference between two sets x and y\nC) computes the difference between two dictionaries x and y\nD) initializes two dictionaries x and y",
+        "difficulty": "medium",
+        "category": ["code_comprehension", "python"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/code_line_description/task.json",
+        "target_answer": "A"
+    },
+
+
+    {
+        "id": 13,
+        "prompt": "Sophia finished 2/3 of a book. She calculated that she finished 90 more pages than she has yet to read. How long is her book?\nOptions:\nA) 229\nB) 270\nC) 877\nD) 266\nE) 281",
+        "difficulty": "medium",
+        "category": ["math_word_problem", "arithmetic"],
+        "n_shots": 0,
+        "_source": "https://raw.githubusercontent.com/google/BIG-bench/refs/heads/main/bigbench/benchmark_tasks/elementary_math_qa/question_only/task.json",
+        "target_answer": "B"
+    },
+    
+    {
+        "id": 14,
+        "prompt": "120 is what percent of 50?\nOptions:\nA) 5 %\nB) 240 %\nC) 50 %\nD) 2 %\nE) 500 %",
+        "difficulty": "medium",
+        "category": ["math_word_problem", "arithmetic"],
+        "n_shots": 0,
+        "_source": "https://raw.githubusercontent.com/google/BIG-bench/refs/heads/main/bigbench/benchmark_tasks/elementary_math_qa/question_only/task.json",
+        "target_answer": "B"
+    },
+
+    {
+        "id": 15,
+        "prompt": "This AI is identifying whether statements contain fallacies. The AI responds with 'Valid' or 'Invalid' as appropriate.\nStatement: Facebook is popular, so it must be a good product.\nResponse: ",
+        "difficulty": "medium",
+        "category": ["logical_reasoning", "fallacy_detection"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/logical_fallacy_detection/task.json",
+        "target_answer": "invalid"
+    },
+
+    {
+        "id": 16,
+        "prompt": "This AI is identifying whether statements contain fallacies. The AI responds with 'Valid' or 'Invalid' as appropriate.\nStatement: Excessive tanning is bad for the skin, so you should wear sunscreen to avoid it.\nResponse: ",
+        "difficulty": "medium",
+        "category": ["logical_reasoning", "fallacy_detection"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/logical_fallacy_detection/task.json",
+        "target_answer": "valid"
+    },
+
+    {
+        "id": 17,
+        "prompt": "Sarah and Tom are going on a picnic. It is Tom's idea, he says it is going to be a lovely day for a picnic. But just as they are unpacking the food, it starts to rain, and soon they are both soaked to the skin. Sarah is cross. She says, \"Oh yes, a lovely day for a picnic all right!\"\nQ:Is it false, what Sarah says?",
+        "difficulty": "medium",
+        "category": ["pragmatics", "reading_comprehension"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/strange_stories/boolean/task.json",
+        "target_answer": "yes"
+    },
+    {
+        "id": 18,
+        "prompt": "At school today John was not present. He was away ill. All the rest of Ben's class were at school, though. When Ben got home after school his mother asked him, \"Was everyone in your class at school today?\" Ben answers, \"Yes, Mummy\".\nDid Ben's mom know that John was not at school?",
+        "difficulty": "medium",
+        "category": ["pragmatics", "reading_comprehension"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/strange_stories/boolean/task.json",
+        "target_answer": "no"
+    },
+    {
+        "id": 19,
+        "prompt": "The word hte is a scrambled version of the English word ",
+        "difficulty": "medium",
+        "category": ["unscramble", "word_puzzle"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/word_unscrambling/task.json",
+        "target_answer": "the"
+    },
+    {
+        "id": 20,
+        "prompt": "The word nad is a scrambled version of the English word ",
+        "difficulty": "medium",
+        "category": ["unscramble", "word_puzzle"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/word_unscrambling/task.json",
+        "target_answer": "and"
+    },
+    {
+        "id": 21,
+        "prompt": "Transcribe the following IPA to English:\nIPA: goʊ ˈdaʊnwərdz tɪ wən əv ðə geɪts, ɔl əv wɪʧ wɪl lɛd ju ˈɪntu ðə kəˈθidrəl.",
+        "difficulty": "medium",
+        "category": ["phonetics", "transcription"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/international_phonetic_alphabet_transliterate/task.json",
+        "target_answer": "English: Go downwards to one of the gates, all of which will lead you into the cathedral."
+    },
+    {
+        "id": 22,
+        "prompt": "Transcribe the following English text to IPA:\nEnglish: Everyone really likes the newest benefits",
+        "difficulty": "medium",
+        "category": ["phonetics", "transcription"],
+        "n_shots": 0,
+        "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/international_phonetic_alphabet_transliterate/task.json",
+        "target_answer": "IPA: ˈɛvriˌwən ˈrɪli laɪks ðə nuəst ˈbɛnəfɪts"
     }
 ]
