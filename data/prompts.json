@@ -200,7 +200,7 @@
         "category": ["phonetics", "transcription"],
         "n_shots": 0,
         "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/international_phonetic_alphabet_transliterate/task.json",
-        "target_answer": "English: Go downwards to one of the gates, all of which will lead you into the cathedral."
+        "target_answer": "Go downwards to one of the gates, all of which will lead you into the cathedral."
     },
     {
         "id": 22,
@@ -209,6 +209,6 @@
         "category": ["phonetics", "transcription"],
         "n_shots": 0,
         "_source": "https://github.com/google/BIG-bench/blob/main/bigbench/benchmark_tasks/international_phonetic_alphabet_transliterate/task.json",
-        "target_answer": "IPA: ˈɛvriˌwən ˈrɪli laɪks ðə nuəst ˈbɛnəfɪts"
+        "target_answer": "ˈɛvriˌwən ˈrɪli laɪks ðə nuəst ˈbɛnəfɪts"
     }
 ]
