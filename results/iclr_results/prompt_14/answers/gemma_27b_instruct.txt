@@ -1,0 +1,20 @@
+Prompt ID: 14
+
+Prompt:
+120 is what percent of 50?
+Options:
+A) 5 %
+B) 240 %
+C) 50 %
+D) 2 %
+E) 500 %
+
+Generated Answer:
+
+
+
+Here's how to solve this problem:
+
+**Understanding Percentages**
+
+A percentage is a way of representing a part of a whole as a fraction of 100.

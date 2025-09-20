@@ -102,8 +102,7 @@ def main(base_dir):
 
 if __name__ == "__main__":
     base_dirs = [
-        Path(get_git_root(), 'results/average_compare_all_models'),
-        Path(get_git_root(), 'results/entropy_compare_all_models')
+        Path(get_git_root(), 'results/iclr_results'),
     ]
 
     for base_dir in base_dirs:

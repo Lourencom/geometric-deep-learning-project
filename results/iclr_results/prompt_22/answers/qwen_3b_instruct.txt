@@ -1,0 +1,8 @@
+Prompt ID: 22
+
+Prompt:
+Transcribe the following English text to IPA:
+English: Everyone really likes the newest benefits
+
+Generated Answer:
+ of the iPhone 8, even though the phone itself may not be all that.

@@ -1,0 +1,13 @@
+Prompt ID: 14
+
+Prompt:
+120 is what percent of 50?
+Options:
+A) 5 %
+B) 240 %
+C) 50 %
+D) 2 %
+E) 500 %
+
+Generated Answer:
+ Now, let's think a bit about this question.

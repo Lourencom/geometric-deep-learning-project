@@ -17,10 +17,10 @@ out_dir = os.path.join(get_git_root(), "families")
 os.makedirs(out_dir, exist_ok=True)
 
 # Read feature files from all prompts
-prompts = ['prompt_1', 'prompt_2', 'prompt_4']
+prompts = ['prompt_1', 'prompt_2', 'prompt_4', 'prompt_5', 'prompt_8', 'prompt_9', 'prompt_10', 'prompt_11', 'prompt_12', 'prompt_13', 'prompt_14', 'prompt_15', 'prompt_16', 'prompt_17', 'prompt_18', 'prompt_19', 'prompt_20', 'prompt_21', 'prompt_22']
 all_results = []
 for prompt in prompts:
-    feature_file = os.path.join(get_git_root(), f"results/entropy_compare_all_models/{prompt}/features/features_top_k_20.json")
+    feature_file = os.path.join(get_git_root(), f"results/iclr_results/{prompt}/features/features_top_k_20.json")
     with open(feature_file, "r") as f:
         all_results.append(json.load(f))
 

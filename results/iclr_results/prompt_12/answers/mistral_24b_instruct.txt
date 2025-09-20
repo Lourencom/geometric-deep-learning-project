@@ -1,0 +1,23 @@
+Prompt ID: 12
+
+Prompt:
+What does the `print` statement in the following Python code accomplish?
+```python
+x = {5,6,7,8}
+y = {5,6,10,11}
+print(set(x)-set(y))
+```
+Options:
+A) prints the set of elements in list x but not list y
+B) prints the difference between two sets x and y
+C) computes the difference between two dictionaries x and y
+D) initializes two dictionaries x and y
+
+Generated Answer:
+
+
+The correct answer is:
+B) prints the difference between two sets x and y
+
+Explanation:
+- The code initializes two sets, `x` and `y`, with specific elements.

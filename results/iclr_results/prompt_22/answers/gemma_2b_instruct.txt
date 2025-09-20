@@ -1,0 +1,8 @@
+Prompt ID: 22
+
+Prompt:
+Transcribe the following English text to IPA:
+English: Everyone really likes the newest benefits
+
+Generated Answer:
+ package.

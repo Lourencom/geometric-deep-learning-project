@@ -1,0 +1,8 @@
+Prompt ID: 21
+
+Prompt:
+Transcribe the following IPA to English:
+IPA: goʊ ˈdaʊnwərdz tɪ wən əv ðə geɪts, ɔl əv wɪʧ wɪl lɛd ju ˈɪntu ðə kəˈθidrəl.
+
+Generated Answer:
+ əˈpɛntiəntli ɪts ɪˈkɛlədʒənt.

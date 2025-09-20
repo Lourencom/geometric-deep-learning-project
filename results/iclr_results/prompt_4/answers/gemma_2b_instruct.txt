@@ -1,0 +1,10 @@
+Prompt ID: 4
+
+Prompt:
+Answer the following question with a concise, one-word response (Yes or No).
+Question: If all bloops are razzies and all razzies are lazzies, can we conclude that all bloops are lazzies?
+
+Generated Answer:
+
+
+**Answer:** Yes

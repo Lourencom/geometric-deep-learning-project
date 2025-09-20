@@ -1,0 +1,19 @@
+Prompt ID: 11
+
+Prompt:
+What does the following Python code do?
+Python code:
+t = [s**2 for s in range(7)]
+Options:
+A) initializes list t with square of numbers from 0 to 6
+B) initializes list t with square of numbers from 0 to 2
+C) computes multiples of 2
+D) populates list t with 10 numbers
+
+Generated Answer:
+
+E) initializes list t with string from 'a' to 'f'
+F) populates list t with 5 numbers
+G) computes sum of all squares
+H) computes sum of squares of all numbers
+I) initializes list t

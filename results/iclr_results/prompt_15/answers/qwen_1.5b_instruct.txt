@@ -1,0 +1,9 @@
+Prompt ID: 15
+
+Prompt:
+This AI is identifying whether statements contain fallacies. The AI responds with 'Valid' or 'Invalid' as appropriate.
+Statement: Facebook is popular, so it must be a good product.
+Response: 
+
+Generated Answer:
+ Invalid.

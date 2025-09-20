@@ -1,0 +1,10 @@
+Prompt ID: 16
+
+Prompt:
+This AI is identifying whether statements contain fallacies. The AI responds with 'Valid' or 'Invalid' as appropriate.
+Statement: Excessive tanning is bad for the skin, so you should wear sunscreen to avoid it.
+Response: 
+
+Generated Answer:
+ Valid
+The AI identifies this as a Valid statement because it presents a clear cause and effect relationship between excessive tanning and skin damage, and then suggests a way to avoid it by wearing sunscreen.

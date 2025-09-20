@@ -84,8 +84,8 @@ def main():
     feature_names = ['clustering', 'average_degree', 'pagerank']
     
     # Set the data directory and prompt IDs
-    data_dir = os.path.join(get_git_root(), "results/entropy_compare_all_models/")
-    prompt_ids = ["prompt_1", "prompt_2", "prompt_4"] # Include prompt_4 if it exists
+    data_dir = os.path.join(get_git_root(), "results/iclr_results/")
+    prompt_ids = ["prompt_1", "prompt_2", "prompt_4", "prompt_5", "prompt_8", "prompt_9", "prompt_10", "prompt_11", "prompt_12", "prompt_13", "prompt_14", "prompt_15", "prompt_16", "prompt_17", "prompt_18", "prompt_19", "prompt_20", "prompt_21", "prompt_22"] # Include prompt_4 if it exists
     
     # Dictionary to store feature values for each feature, grouped by correctness across all families
     # Structure: {feature_name: {'correct': [...], 'incorrect': [...]}}

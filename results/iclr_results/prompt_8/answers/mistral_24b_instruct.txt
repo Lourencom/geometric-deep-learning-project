@@ -1,0 +1,11 @@
+Prompt ID: 8
+
+Prompt:
+Determine whether a given sentence asserts a causal, correlative, or neutral relation between two events. If the sentence asserts a causal relation respond causal, if the sentence asserts a correlative relation respond correlative, if the sentence asserts neither a causal nor a correlative relation between two events respond neutral.
+Sentences:
+1.When I drink this tea, I feel less nervous.
+2.Adding ice cools the tea.
+
+Generated Answer:
+ (The word "cools" refers to a physical state of being cool)
+3.

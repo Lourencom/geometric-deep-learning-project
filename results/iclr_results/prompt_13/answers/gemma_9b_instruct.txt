@@ -1,0 +1,20 @@
+Prompt ID: 13
+
+Prompt:
+Sophia finished 2/3 of a book. She calculated that she finished 90 more pages than she has yet to read. How long is her book?
+Options:
+A) 229
+B) 270
+C) 877
+D) 266
+E) 281
+
+Generated Answer:
+
+
+
+Here's how to solve the problem:
+
+**Let:**
+
+*  'x' represent the total number of pages in the book.

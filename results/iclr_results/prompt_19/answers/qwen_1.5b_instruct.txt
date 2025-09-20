@@ -1,0 +1,7 @@
+Prompt ID: 19
+
+Prompt:
+The word hte is a scrambled version of the English word 
+
+Generated Answer:
+ute.

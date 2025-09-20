@@ -35,9 +35,9 @@ out_dir = os.path.join(get_git_root(), "families")
 os.makedirs(out_dir, exist_ok=True)
 
 
-data_dir = os.path.join(get_git_root(), "results/entropy_compare_all_models/")
-additional_dir = os.path.join(get_git_root(), "pavle_asked/all_models/")
-prompt_ids = ["prompt_1", "prompt_2", "prompt_4"]
+data_dir = os.path.join(get_git_root(), "results/iclr_results/")
+#additional_dir = os.path.join(get_git_root(), "pavle_asked/all_models/")
+prompt_ids = ["prompt_1", "prompt_2", "prompt_3", "prompt_4", "prompt_5", "prompt_8", "prompt_9", "prompt_10", "prompt_11", "prompt_12", "prompt_13", "prompt_14", "prompt_15", "prompt_16", "prompt_17", "prompt_18", "prompt_19", "prompt_20", "prompt_21", "prompt_22"]
 
 # Updated model list including additional models
 models_by_families = {
@@ -78,7 +78,7 @@ for prompt_id in prompt_ids:
         print(f"Warning: Could not find file for {prompt_id} in main directory")
         continue
 
-# Load data from the additional directory
+'''# Load data from the additional directory
 for prompt_id in prompt_ids:
     try:
         file_path = os.path.join(additional_dir, f"{prompt_id}/features/features_top_k_20.json")
@@ -101,7 +101,7 @@ for prompt_id in prompt_ids:
                                     all_prompts_data[feature_name][family][model].append(feature_value)
     except FileNotFoundError:
         print(f"Warning: Could not find file for {prompt_id} in additional directory")
-        continue
+        continue'''
 
 # Create the plots with error bars based on prompt variation
 fig, axs = plt.subplots(1, 3, figsize=(18, 5))

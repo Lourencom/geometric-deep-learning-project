@@ -1,0 +1,12 @@
+Prompt ID: 2
+
+Prompt:
+Answer the following question with a concise, one-word response.
+Example 1: What is the capital of Portugal? Lisbon.
+Example 2: What is the capital of Serbia? Belgrade.
+What is the capital of France?
+
+Generated Answer:
+
+
+Answer: Paris.
